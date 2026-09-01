@@ -1,0 +1,6 @@
+{
+  "name": "HK Samrat AI",
+  "description": "Next-generation unified AI platform with high-speed generation, deep logical reasoning, real-time web intelligence, image generation, voice synthesis, live code canvas, and comprehensive custom settings.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
