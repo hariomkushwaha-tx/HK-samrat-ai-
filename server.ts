@@ -2,17 +2,12 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { fileURLToPath } from 'url';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import dotenv from 'dotenv';
-import { createServer as createViteServer } from 'vite';
 import { EdgeTTS } from 'node-edge-tts';
 import * as googleTTS from 'google-tts-api';
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;
@@ -49,6 +44,27 @@ app.get('/api/health', (req, res) => {
     capabilities: ['fast_turbo', 'deep_reasoning', 'google_search_grounding', 'multimodal_vision', 'live_code_canvas', 'imagine_studio'],
     timestamp: new Date().toISOString(),
   });
+});
+
+// Google Verification & SEO routes
+app.get('/googlece4b648b2f3f85ab.html', (req, res) => {
+  res.type('text/html').send('google-site-verification: googlece4b648b2f3f85ab.html');
+});
+
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send('User-agent: *\nAllow: /\n\nSitemap: https://hk-samrat-ai.vercel.app/sitemap.xml');
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://hk-samrat-ai.vercel.app/</loc>
+    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`);
 });
 
 // Clean error message parser helper
@@ -759,6 +775,7 @@ app.post('/api/tts', async (req, res) => {
 
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
