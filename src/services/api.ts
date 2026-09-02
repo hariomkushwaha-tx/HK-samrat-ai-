@@ -49,7 +49,16 @@ export async function streamChat(options: StreamChatOptions): Promise<() => void
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      let errorDetails = `HTTP error! status: ${response.status}`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.error) {
+          errorDetails = errorJson.error;
+        } else if (errorJson.message) {
+          errorDetails = errorJson.message;
+        }
+      } catch {}
+      throw new Error(errorDetails);
     }
 
     const reader = response.body?.getReader();

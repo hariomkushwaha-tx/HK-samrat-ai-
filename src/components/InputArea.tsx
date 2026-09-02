@@ -16,6 +16,7 @@ import {
 import { useAI } from '../context/AIContext';
 import { MessageAttachment } from '../types';
 import { enhancePrompt } from '../services/api';
+import { compressImageFile } from '../utils/imageCompressor';
 
 export const InputArea: React.FC = () => {
   const {
@@ -121,24 +122,25 @@ export const InputArea: React.FC = () => {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64 = event.target?.result as string;
+    const fileList = Array.from(files);
+    for (const file of fileList) {
+      try {
+        const optimized = await compressImageFile(file);
         const newAttachment: MessageAttachment = {
           id: 'att_' + Date.now() + Math.random(),
-          name: file.name,
-          mimeType: file.type,
-          data: base64,
+          name: optimized.name,
+          mimeType: optimized.mimeType,
+          data: optimized.data,
         };
         setAttachments((prev) => [...prev, newAttachment]);
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (err) {
+        console.error('File compression error:', err);
+      }
+    }
 
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -169,27 +171,28 @@ export const InputArea: React.FC = () => {
     setIsDragOver(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const base64 = event.target?.result as string;
+      const fileList = Array.from(files);
+      for (const file of fileList) {
+        try {
+          const optimized = await compressImageFile(file);
           setAttachments((prev) => [
             ...prev,
             {
               id: 'att_' + Date.now() + Math.random(),
-              name: file.name,
-              mimeType: file.type,
-              data: base64,
+              name: optimized.name,
+              mimeType: optimized.mimeType,
+              data: optimized.data,
             },
           ]);
-        };
-        reader.readAsDataURL(file);
-      });
+        } catch (err) {
+          console.error('File drop compression error:', err);
+        }
+      }
     }
   };
 

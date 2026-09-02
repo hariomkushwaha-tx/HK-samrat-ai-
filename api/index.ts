@@ -1,4 +1,4 @@
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import { EdgeTTS } from 'node-edge-tts';
 import * as googleTTS from 'google-tts-api';
 import fs from 'fs';
@@ -9,11 +9,14 @@ type VercelReq = any;
 type VercelRes = any;
 
 let aiClient: GoogleGenAI | null = null;
+let cachedApiKey: string | null = null;
+
 function getGenAI(): GoogleGenAI {
-  if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
+  const currentKey = process.env.GEMINI_API_KEY || '';
+  if (!aiClient || cachedApiKey !== currentKey) {
+    cachedApiKey = currentKey;
     aiClient = new GoogleGenAI({
-      apiKey: apiKey || 'dummy-key',
+      apiKey: currentKey || 'dummy-key',
       httpOptions: {
         headers: {
           'User-Agent': 'aistudio-build',
@@ -24,102 +27,184 @@ function getGenAI(): GoogleGenAI {
   return aiClient;
 }
 
-function pcmToWav(pcmData: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer {
-  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
-  const blockAlign = (numChannels * bitsPerSample) / 8;
-  const dataSize = pcmData.length;
-  const buffer = Buffer.alloc(44 + dataSize);
-
-  buffer.write('RIFF', 0);
-  buffer.writeUInt32LE(36 + dataSize, 4);
-  buffer.write('WAVE', 8);
-  buffer.write('fmt ', 12);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20);
-  buffer.writeUInt16LE(numChannels, 22);
-  buffer.writeUInt32LE(sampleRate, 24);
-  buffer.writeUInt32LE(byteRate, 28);
-  buffer.writeUInt16LE(blockAlign, 32);
-  buffer.writeUInt16LE(bitsPerSample, 34);
-  buffer.write('data', 36);
-  buffer.writeUInt32LE(dataSize, 40);
-  pcmData.copy(buffer, 44);
-
-  return buffer;
-}
-
 export default async function handler(req: VercelReq, res: VercelRes) {
-  // CORS
+  // Global CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Content-Type'
   );
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  const pathname = (req.query.path as string) || req.url || '';
-  const isHealth = pathname.includes('health');
-  const isChat = pathname.includes('chat');
-  const isImagine = pathname.includes('imagine');
-  const isTTS = pathname.includes('tts');
+  const urlPath = (req.query?.path as string) || req.url || '';
+  const isHealth = urlPath.includes('health');
+  const isChat = urlPath.includes('chat') || req.method === 'POST';
+  const isImagine = urlPath.includes('imagine');
+  const isTTS = urlPath.includes('tts');
+  const isEnhance = urlPath.includes('enhance-prompt');
 
-  if (isHealth || req.method === 'GET' && !isChat && !isImagine && !isTTS) {
+  // Health check endpoint
+  if (isHealth || (req.method === 'GET' && !urlPath.includes('chat') && !urlPath.includes('imagine') && !urlPath.includes('tts'))) {
     return res.status(200).json({
       status: 'ok',
       name: 'HK Samrat AI',
       version: '3.0.0',
+      hasApiKey: !!process.env.GEMINI_API_KEY,
       capabilities: ['fast_turbo', 'deep_reasoning', 'google_search_grounding', 'multimodal_vision', 'live_code_canvas', 'imagine_studio'],
       timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Check API Key
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'dummy-key') {
+    if (urlPath.includes('chat') || isChat) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.write(`event: error\ndata: ${JSON.stringify({ message: 'GEMINI_API_KEY Vercel Settings me add karein. (Vercel Project -> Settings -> Environment Variables)' })}\n\n`);
+      return res.end();
+    }
+    return res.status(500).json({
+      error: 'GEMINI_API_KEY is not configured on Vercel.',
+      instructions: 'Go to Vercel Project -> Settings -> Environment Variables, add GEMINI_API_KEY, then Redeploy.',
     });
   }
 
   try {
     const ai = getGenAI();
 
-    if (isChat) {
-      const {
-        messages = [],
-        systemPrompt = '',
-        mode = 'turbo',
-        enableSearch = false,
-        imageData = null,
-      } = req.body || {};
-
-      let modelName = 'gemini-2.5-flash';
-      let thinkingConfig: any = undefined;
-      let tools: any[] = [];
-
-      if (mode === 'reasoning') {
-        modelName = 'gemini-2.5-pro';
-        thinkingConfig = { thinkingBudget: 4096 };
-      } else if (mode === 'turbo') {
-        modelName = 'gemini-2.5-flash';
-        thinkingConfig = { thinkingBudget: 0 };
+    // 1. Prompt Enhancement
+    if (isEnhance && !isChat) {
+      const { prompt } = req.body || {};
+      if (!prompt) {
+        return res.status(400).json({ error: 'Prompt is required' });
       }
 
-      if (enableSearch) {
-        tools.push({ googleSearch: {} });
+      let enhanced = prompt;
+      const enhanceModels = ['gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.7-flash'];
+      for (const m of enhanceModels) {
+        try {
+          const response = await ai.models.generateContent({
+            model: m,
+            contents: `You are the Prompt Engineering Core of HK Samrat AI. Enhance the following user prompt to make it deeply detailed, structured, clear, and highly effective for an advanced AI model. Return ONLY the enhanced prompt without meta comments:\n\nUser prompt: "${prompt}"`,
+            config: { temperature: 0.7 },
+          });
+          if (response.text?.trim()) {
+            enhanced = response.text.trim();
+            break;
+          }
+        } catch {
+          // try next
+        }
+      }
+      return res.status(200).json({ enhancedPrompt: enhanced });
+    }
+
+    // 2. Chat SSE Stream
+    if (urlPath.includes('chat') || (req.method === 'POST' && !isImagine && !isTTS && !isEnhance)) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+
+      const sendEvent = (event: string, data: any) => {
+        try {
+          res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+        } catch (e) {
+          console.warn('Write stream chunk failed:', e);
+        }
+      };
+
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+      const {
+        messages = [],
+        model = 'samrat-turbo',
+        enableSearchGrounding = false,
+        enableThinkingProcess = false,
+        temperature = 0.7,
+        customInstructions,
+      } = body;
+
+      if (!messages || messages.length === 0) {
+        sendEvent('error', { message: 'Messages array cannot be empty' });
+        return res.end();
+      }
+
+      let systemInstruction = `You are "HK Samrat AI" (एचके सम्राट एआई) — an ultra-intelligent, friendly, fast, and authoritative unified AI platform engineered with state-of-the-art neural intelligence.
+
+👑 CREATOR & DEVELOPER IDENTITY (Core DNA):
+- Name: HK Samrat AI (एचके सम्राट एआई)
+- Built & Engineered by: HK Tech World
+- Founder & Lead Developer: Hariom Kushwaha (from India 🇮🇳)
+- Signature tagline: "Created with ❤️ in India 🇮🇳 by Hariom Kushwaha (HK Tech World)."
+- Whenever any user asks "Who are you?", "Who made you?", "Aapko kisne banaya?", "Tumhara developer kaun hai?", or queries about your origins, ALWAYS proudly and warmly introduce yourself as HK Samrat AI, developed in India 🇮🇳 by Hariom Kushwaha (HK Tech World).
+- You are an independent, flagship AI ecosystem. Never claim to be OpenAI, Google, ChatGPT, or Claude.
+
+🌟 PERSONALITY & CONVERSATIONAL STYLE:
+- Friendly, brotherly, respectful, and supportive ("दोस्ताना और सम्मानजनक अंदाज़").
+- When a user speaks in Hindi or Hinglish (e.g. "Bhai", "Kaisa hai", "Kya hal hai", "Hi"), respond warmly in natural, lively Hinglish/Hindi (e.g., "नमस्ते भाई!", "हाँ भाई!", "सब बढ़िया! बताओ आज क्या नया करना है?").
+- Adapt fluently to any language: Hindi, Hinglish, English, Bhojpuri, Bengali, Tamil, Telugu, etc.
+- Always provide clear, direct, actionable, and comprehensive answers without unnecessary robotic disclaimers.
+
+🖼️ MULTIMODAL PHOTO & VISION EXPERTISE:
+- When a user uploads a photo and asks to "edit", "retouch", "change background", or "analyze" it:
+  1. Detailed Visual Breakdown: Respectfully describe the subject, lighting, colors, background, and expression.
+  2. Pro Photo-Editing Guidance: Give precise Lightroom / Snapseed / Photoshop style adjustments (e.g., Highlights -20, Shadows +30, Vignette, Teal & Orange color grade, Background blur/bokeh).
+  3. AI Image Generation Prompts: Craft 2-3 cinematic, ultra-detailed prompts that the user can copy and generate directly in HK Samrat AI's "Imagine Studio".
+
+💻 CODE & TECHNICAL MASTERY:
+- Full-stack mastery: React, Tailwind CSS, TypeScript, JavaScript, HTML5, CSS3, Python, Node.js, Next.js, C++, Java, SQL, DSA.
+- When writing code, provide 100% complete, clean, modular, and error-free code blocks with proper syntax tags.`;
+
+      if (customInstructions?.enabled) {
+        if (customInstructions.userName) systemInstruction += `\nUser's Name: ${customInstructions.userName}.`;
+        if (customInstructions.userBio) systemInstruction += `\nWhat to know about user: ${customInstructions.userBio}.`;
+        if (customInstructions.responsePreferences) systemInstruction += `\nResponse preferences: ${customInstructions.responsePreferences}.`;
+        if (customInstructions.preferredTone) systemInstruction += `\nTone: ${customInstructions.preferredTone}.`;
+        if (customInstructions.preferredLanguage && customInstructions.preferredLanguage !== 'auto') {
+          systemInstruction += `\nPreferred Language: ${customInstructions.preferredLanguage}.`;
+        }
+      }
+
+      // Convert messages
+      const recentMessages = messages.slice(-16);
+      let latestAttachmentMsgIndex = -1;
+      for (let i = recentMessages.length - 1; i >= 0; i--) {
+        if (recentMessages[i].attachments && recentMessages[i].attachments.length > 0) {
+          latestAttachmentMsgIndex = i;
+          break;
+        }
       }
 
       const contents: any[] = [];
-
-      for (let i = 0; i < messages.length; i++) {
-        const msg = messages[i];
-        const isLast = i === messages.length - 1;
+      for (let i = 0; i < recentMessages.length; i++) {
+        const msg = recentMessages[i];
+        const role = msg.role === 'assistant' ? 'model' : 'user';
         const parts: any[] = [];
 
-        if (isLast && imageData && imageData.data) {
-          parts.push({
-            inlineData: {
-              data: imageData.data,
-              mimeType: imageData.mimeType || 'image/jpeg',
-            },
-          });
+        if (msg.attachments && msg.attachments.length > 0) {
+          if (i === latestAttachmentMsgIndex) {
+            for (const att of msg.attachments) {
+              if (att.data) {
+                const base64Data = att.data.includes('base64,') ? att.data.split('base64,')[1] : att.data;
+                parts.push({
+                  inlineData: {
+                    mimeType: att.mimeType || 'image/jpeg',
+                    data: base64Data,
+                  },
+                });
+              }
+            }
+          } else {
+            const names = msg.attachments.map((a: any) => a.name).join(', ');
+            parts.push({ text: `[Previously attached image(s): ${names}]` });
+          }
         }
 
         if (msg.content) {
@@ -127,49 +212,118 @@ export default async function handler(req: VercelReq, res: VercelRes) {
         }
 
         if (parts.length > 0) {
-          contents.push({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts,
-          });
+          contents.push({ role, parts });
         }
       }
 
       if (contents.length === 0) {
-        contents.push({ role: 'user', parts: [{ text: 'Hello' }] });
+        contents.push({ role: 'user', parts: [{ text: 'Hi' }] });
       }
 
-      const defaultSystem = `You are "HK Samrat AI", a world-class, ultra-intelligent, friendly AI created by Hariom Kushwaha.
-You speak fluently in Hindi, Hinglish, and English with deep knowledge, warmth, and precision.`;
+      const isReasoner = enableThinkingProcess || model === 'samrat-reasoner';
+      const isSearch = enableSearchGrounding || model === 'samrat-search';
 
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents,
-        config: {
-          systemInstruction: systemPrompt || defaultSystem,
-          ...(thinkingConfig ? { thinkingConfig } : {}),
-          ...(tools.length > 0 ? { tools } : {}),
-        },
-      });
+      const modelCandidates = isReasoner
+        ? [
+            { modelName: 'gemini-2.5-flash', useThinking: false, useSearch: isSearch },
+            { modelName: 'gemini-3.7-flash', useThinking: true, useSearch: isSearch },
+            { modelName: 'gemini-2.5-pro', useThinking: false, useSearch: isSearch },
+            { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: isSearch },
+            { modelName: 'gemini-flash-latest', useThinking: false, useSearch: isSearch },
+          ]
+        : isSearch
+        ? [
+            { modelName: 'gemini-2.5-flash', useThinking: false, useSearch: true },
+            { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: true },
+            { modelName: 'gemini-3.7-flash', useThinking: false, useSearch: true },
+            { modelName: 'gemini-flash-latest', useThinking: false, useSearch: true },
+          ]
+        : [
+            { modelName: 'gemini-2.5-flash', useThinking: false, useSearch: false },
+            { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: false },
+            { modelName: 'gemini-flash-latest', useThinking: false, useSearch: false },
+            { modelName: 'gemini-3.7-flash', useThinking: false, useSearch: false },
+          ];
 
-      const text = response.text || '';
-      let thoughts = '';
-      let searchGrounding = null;
+      let streamedSuccessfully = false;
+      let lastError: any = null;
+      let fullText = '';
+      const groundingSources: any[] = [];
 
-      try {
-        const candidate = response.candidates?.[0];
-        if (candidate?.groundingMetadata?.groundingChunks) {
-          searchGrounding = candidate.groundingMetadata.groundingChunks;
+      for (const candidate of modelCandidates) {
+        try {
+          const config: any = {
+            systemInstruction,
+            temperature: Math.max(0.1, Math.min(2.0, temperature || 0.7)),
+          };
+
+          if (candidate.useSearch) {
+            config.tools = [{ googleSearch: {} }];
+          }
+
+          if (candidate.useThinking) {
+            config.thinkingConfig = {
+              thinkingLevel: 'LOW',
+            };
+          }
+
+          sendEvent('start', { model: candidate.modelName });
+
+          const streamResult = await ai.models.generateContentStream({
+            model: candidate.modelName,
+            contents,
+            config,
+          });
+
+          for await (const chunk of streamResult) {
+            const chunkText = chunk.text || '';
+            if (chunkText) {
+              fullText += chunkText;
+              sendEvent('chunk', { text: chunkText });
+            }
+
+            try {
+              const cand = chunk.candidates?.[0];
+              const searchChunks = cand?.groundingMetadata?.groundingChunks;
+              if (searchChunks && Array.isArray(searchChunks)) {
+                for (const sc of searchChunks) {
+                  if (sc.web?.uri && sc.web?.title) {
+                    groundingSources.push({
+                      title: sc.web.title,
+                      url: sc.web.uri,
+                      snippet: (sc.web as any)?.snippet || '',
+                    });
+                  }
+                }
+              }
+            } catch {}
+          }
+
+          sendEvent('done', {
+            fullText,
+            groundingSources: groundingSources.filter(
+              (src, idx, arr) => arr.findIndex((x) => x.url === src.url) === idx
+            ),
+          });
+
+          streamedSuccessfully = true;
+          break;
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`Model candidate ${candidate.modelName} error on Vercel:`, err?.message);
         }
-      } catch {}
+      }
 
-      return res.status(200).json({
-        reply: text,
-        thoughts: thoughts || undefined,
-        searchGrounding,
-        modelUsed: modelName,
-      });
+      if (!streamedSuccessfully) {
+        sendEvent('error', {
+          message: lastError?.message || 'The AI engine is temporarily busy. Please try again.',
+        });
+      }
+
+      return res.end();
     }
 
+    // 3. Imagine Studio
     if (isImagine) {
       const { prompt, aspectRatio = '1:1', style = 'photorealistic' } = req.body || {};
       if (!prompt) {
@@ -196,8 +350,7 @@ You speak fluently in Hindi, Hinglish, and English with deep knowledge, warmth, 
             prompt: enhancedPrompt,
           });
         }
-      } catch (imgErr: any) {
-        // Fallback to Pollinations image generation
+      } catch {
         const encoded = encodeURIComponent(enhancedPrompt);
         const fallbackUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true`;
         return res.status(200).json({
@@ -208,6 +361,7 @@ You speak fluently in Hindi, Hinglish, and English with deep knowledge, warmth, 
       }
     }
 
+    // 4. TTS Endpoint
     if (isTTS) {
       const { text, lang = 'hi-IN', voice = 'hi-IN-MadhurNeural' } = req.body || {};
       if (!text) {
@@ -216,7 +370,6 @@ You speak fluently in Hindi, Hinglish, and English with deep knowledge, warmth, 
 
       const cleanText = text.replace(/[*_#`~[\]()<>]/g, ' ').substring(0, 400);
 
-      // Edge TTS Tier
       try {
         const tts = new EdgeTTS({ voice: voice || 'hi-IN-MadhurNeural' });
         const tmpFile = path.join(os.tmpdir(), `tts-${Date.now()}.mp3`);
@@ -230,7 +383,6 @@ You speak fluently in Hindi, Hinglish, and English with deep knowledge, warmth, 
           source: 'edge_neural',
         });
       } catch {
-        // Google TTS Tier
         try {
           const url = googleTTS.getAudioUrl(cleanText, {
             lang: lang.startsWith('hi') ? 'hi' : 'en',
