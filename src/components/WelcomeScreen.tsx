@@ -74,14 +74,10 @@ export const WelcomeScreen: React.FC = () => {
     <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center text-center px-4 py-6 md:py-10 select-none">
       {/* Brand Hero Editorial */}
       <div className="mb-6 md:mb-8 flex flex-col items-center">
-        <div className="relative mb-4">
+        <div className="mb-4">
           <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-[#141414] border border-[#2A2A2A] flex items-center justify-center shadow-lg">
             <span className="font-serif italic font-bold text-xl md:text-2xl text-white tracking-wide">HK</span>
           </div>
-          <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500 border-2 border-[#0A0A0A]"></span>
-          </span>
         </div>
 
         <h1 className="text-2xl md:text-4xl font-serif italic font-bold tracking-tight text-white mb-2">

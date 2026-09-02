@@ -1,10 +1,12 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { EdgeTTS } from 'node-edge-tts';
 import * as googleTTS from 'google-tts-api';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+
+type VercelReq = any;
+type VercelRes = any;
 
 let aiClient: GoogleGenAI | null = null;
 function getGenAI(): GoogleGenAI {
@@ -46,7 +48,7 @@ function pcmToWav(pcmData: Buffer, sampleRate = 24000, numChannels = 1, bitsPerS
   return buffer;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelReq, res: VercelRes) {
   // CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
