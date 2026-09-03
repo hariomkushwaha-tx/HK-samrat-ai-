@@ -161,6 +161,12 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const savedTextRef = useRef<string>('');
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map());
 
+  // Fine-grained character & word boundary tracking for seamless Resume without repeating
+  const currentChunkTextRef = useRef<string>('');
+  const currentWordCharOffsetRef = useRef<number>(0);
+  const currentWordLengthRef = useRef<number>(0);
+  const lastSpokenWordRef = useRef<string>('');
+
   // Auto-collapse sidebar on mobile screen resize
   useEffect(() => {
     const handleResize = () => {
@@ -321,15 +327,48 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const sendMessage = async (content: string, attachments: MessageAttachment[] = []) => {
-    if ((!content.trim() && attachments.length === 0) || isGenerating) return;
-
     const trimmed = content.trim();
-    const cleanCmd = trimmed.toLowerCase().replace(/[.!?।]/g, '').trim();
+    const cleanCmd = trimmed.toLowerCase().replace(/[.,!?:;|।\-_]/g, ' ').replace(/\s+/g, ' ').trim();
 
-    // Voice & Text Playback Control Commands
-    const isStopCommand = /^(stop|pause|रुको|ठहर\s*जाओ|रुक\s*जाओ|चुप|चुप\s*हो\s*जाओ|बोलना\s*बंद\s*करो|रोको|pause\s*speech|stop\s*speech)$/i.test(cleanCmd);
-    const isResumeCommand = /^(resume|continue|आगे\s*बोलो|जहाँ\s*से\s*रोका\s*था\s*वहीं\s*से\s*चालू\s*करो|चालू\s*करो|फिर\s*से\s*बोलो|बोलते\s*रहो|जारी\s*रखो|resume\s*speech)$/i.test(cleanCmd);
-    const isSpeakCommand = /^(speak|start|बोलना\s*शुरू\s*करो|बोलो|पढ़ो|सुनाओ|read\s*aloud)$/i.test(cleanCmd);
+    // Voice & Text Playback Control Command Matchers
+    const isStopCommand = (() => {
+      if (!cleanCmd) return false;
+      const patterns = [
+        /^stop(\s|$)/, /^pause(\s|$)/, /^halt(\s|$)/, /^wait(\s|$)/,
+        /^(रुको|रुक\s*जाओ|रुकिए|ठहरो|ठहर\s*जाओ|ठहरिए|चुप|चुप\s*रहो|चुप\s*हो\s*जाओ|रोको|रोक\s*दो|रोक\s*लो|पॉज)(\s|$)/,
+        /बोलना\s*(बंद|रोको)/, /आवाज\s*(बंद|रोको)/,
+        /stop\s*(speech|audio|karo|please)/, /pause\s*(speech|audio|karo|please)/,
+      ];
+      return patterns.some((p) => p.test(cleanCmd)) || ['stop', 'pause', 'रुको', 'ठहरो', 'चुप', 'रोको'].includes(cleanCmd);
+    })();
+
+    const isResumeCommand = (() => {
+      if (!cleanCmd) return false;
+      const patterns = [
+        /^resume(\s|$)/, /^continue(\s|$)/, /^proceed(\s|$)/,
+        /आगे\s*(बोलो|बताओ|सुनाओ|पढ़ो|पढ़ो|चलो|जारी|चालू)/,
+        /जहाँ\s*से\s*रोका\s*था/,
+        /वहीं\s*से\s*(चालू|बोलो|शुरू)/, /वही\s*से\s*(चालू|बोलो|शुरू)/,
+        /^(चालू\s*करो|फिर\s*से\s*बोलो|बोलते\s*रहो|जारी\s*रखो|जारी\s*करो)(\s|$)/,
+        /resume\s*(speech|audio|karo|please)/, /continue\s*(speech|audio|karo|please)/,
+      ];
+      return patterns.some((p) => p.test(cleanCmd)) || ['resume', 'continue', 'आगे बोलो', 'चालू करो'].includes(cleanCmd);
+    })();
+
+    const isSpeakCommand = (() => {
+      if (!cleanCmd) return false;
+      const patterns = [
+        /^speak(\s|$)/, /^start(\s|$)/, /^read(\s|$)/,
+        /बोलना\s*(शुरू|चालू)/, /पढ़ना\s*(शुरू|चालू)/,
+        /^(बोलो|सुनाओ|पढ़ो|पढ़ो|शुरू\s*करो)(\s|$)/,
+        /बोलकर\s*सुनाओ/, /बोल\s*के\s*बताओ/, /आवाज\s*में\s*सुनाओ/,
+        /speak\s*(please|karo|out)/, /start\s*speaking/,
+      ];
+      return patterns.some((p) => p.test(cleanCmd)) || ['speak', 'start', 'बोलो', 'सुनाओ', 'पढ़ो'].includes(cleanCmd);
+    })();
+
+    // Allow STOP command even while generation is underway
+    if ((!trimmed && attachments.length === 0) || (isGenerating && !isStopCommand)) return;
 
     let targetSessionId = currentSessionId;
     let currentSess = sessions.find((s) => s.id === targetSessionId);
@@ -340,8 +379,12 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
 
     // Handle STOP / PAUSE command
-    if (isStopCommand && (isSpeaking || isSpeechActiveRef.current)) {
+    if (isStopCommand) {
+      if (isGenerating) {
+        stopGenerating();
+      }
       pauseSpeech();
+
       const userMessageId = 'msg_user_' + Date.now();
       const assistantMessageId = 'msg_asst_' + (Date.now() + 1);
       const userMessage: ChatMessage = {
@@ -354,7 +397,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       const assistantMessage: ChatMessage = {
         id: assistantMessageId,
         role: 'assistant',
-        content: '⏸️ **आवाज़ रोक दी गई है।** आपकी वर्तमान स्थिति सुरक्षित है।\n\nफिर से सुनने के लिए **"आगे बोलो"** कहें या **Resume** बटन दबाएं।',
+        content: '⏸️ **बोलना रोक दिया गया है।** आपकी वर्तमान स्थिति (शब्द एवं वाक्य) सुरक्षित है।\n\nजब भी आप तैयार हों, **"आगे बोलो"** कहें या **Resume** बटन दबाएं — मैं ठीक उसी शब्द से आगे बोलना शुरू करूँगा।',
         timestamp: Date.now() + 1,
         modelUsed: activeModel,
       };
@@ -369,7 +412,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
 
     // Handle RESUME / CONTINUE command
-    if (isResumeCommand && (isSpeechPaused || pausedTimeRef.current > 0 || pausedChunkIndexRef.current > 0)) {
+    if (isResumeCommand) {
       resumeSpeech();
       const userMessageId = 'msg_user_' + Date.now();
       const assistantMessageId = 'msg_asst_' + (Date.now() + 1);
@@ -383,7 +426,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       const assistantMessage: ChatMessage = {
         id: assistantMessageId,
         role: 'assistant',
-        content: '▶️ **आवाज़ वहीं से शुरू हो गई है** जहाँ आपने रोका था।',
+        content: '▶️ **जारी किया जा रहा है...** जहाँ से रोका गया था, ठीक वहीं से बिना किसी दोहराव के बोलना शुरू कर रहा हूँ।',
         timestamp: Date.now() + 1,
         modelUsed: activeModel,
       };
@@ -414,7 +457,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         const assistantMessage: ChatMessage = {
           id: assistantMessageId,
           role: 'assistant',
-          content: '🔊 **मैं संदेश पढ़ना शुरू कर रहा हूँ...**',
+          content: '🔊 **शुरू से बोल रहा हूँ...**',
           timestamp: Date.now() + 1,
           modelUsed: activeModel,
         };
@@ -628,6 +671,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const playSpeechChunk = (messageId: string, chunks: string[], index: number) => {
     if (!window.speechSynthesis || !isSpeechActiveRef.current || index >= chunks.length) {
       setIsSpeaking(false);
+      setIsSpeechPaused(false);
       setSpeakingMessageId(null);
       isSpeechActiveRef.current = false;
       return;
@@ -635,6 +679,10 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     speechIndexRef.current = index;
     const currentChunk = chunks[index];
+    currentChunkTextRef.current = currentChunk;
+    currentWordCharOffsetRef.current = 0;
+    currentWordLengthRef.current = 0;
+
     const utterance = new SpeechSynthesisUtterance(currentChunk);
 
     const availableVoices = window.speechSynthesis.getVoices();
@@ -662,8 +710,22 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     utterance.rate = Math.max(0.75, Math.min(1.4, settings.voice.voiceRate || 1.0));
     utterance.pitch = Math.max(0.85, Math.min(1.15, settings.voice.voicePitch || 1.0));
 
+    // Word boundary tracking for exact resume
+    utterance.onboundary = (e: SpeechSynthesisEvent) => {
+      if (e.name === 'word' || !e.name) {
+        currentWordCharOffsetRef.current = e.charIndex;
+        const remaining = currentChunk.slice(e.charIndex);
+        const match = remaining.match(/^\S+/);
+        if (match) {
+          currentWordLengthRef.current = match[0].length;
+          lastSpokenWordRef.current = match[0];
+        }
+      }
+    };
+
     utterance.onstart = () => {
       setIsSpeaking(true);
+      setIsSpeechPaused(false);
       setSpeakingMessageId(messageId);
     };
 
@@ -678,7 +740,11 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       }
     };
 
-    utterance.onerror = (e) => {
+    utterance.onerror = (e: any) => {
+      // If user paused or stopped, cancel was called deliberately, do not auto-advance!
+      if (!isSpeechActiveRef.current || e.error === 'canceled' || e.error === 'interrupted') {
+        return;
+      }
       console.warn('Speech chunk error, proceeding:', e);
       if (isSpeechActiveRef.current && index + 1 < chunks.length) {
         setTimeout(() => {
@@ -822,19 +888,41 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const pauseSpeech = () => {
+    isSpeechActiveRef.current = false;
+
     if (activeAudioRef.current) {
       pausedTimeRef.current = activeAudioRef.current.currentTime;
       activeAudioRef.current.pause();
     }
 
     if (typeof window !== 'undefined' && window.speechSynthesis) {
-      pausedChunkIndexRef.current = speechIndexRef.current;
+      const curIndex = speechIndexRef.current;
+      const curChunk = currentChunkTextRef.current || (speechQueueRef.current[curIndex] || '');
+
+      if (curChunk) {
+        const wordOffset = currentWordCharOffsetRef.current;
+        const wordLen = currentWordLengthRef.current;
+        const nextCharPos = wordOffset + wordLen;
+
+        const remainingInChunk = curChunk.slice(nextCharPos).trim();
+
+        if (remainingInChunk.length > 0) {
+          // Replace current chunk with unread portion so resume starts from the EXACT next word!
+          speechQueueRef.current[curIndex] = remainingInChunk;
+          pausedChunkIndexRef.current = curIndex;
+        } else {
+          // Current chunk was completed or at the very end
+          pausedChunkIndexRef.current = curIndex + 1;
+        }
+      } else {
+        pausedChunkIndexRef.current = curIndex;
+      }
+
       try {
         window.speechSynthesis.cancel();
       } catch {}
     }
 
-    isSpeechActiveRef.current = false;
     setIsSpeaking(false);
     setIsSpeechPaused(true);
     setIsSpeechLoading(false);
@@ -870,7 +958,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       }
     }
 
-    // 2. Fallback to client browser synthesis from paused chunk index
+    // 2. Client browser synthesis from paused chunk index (sliced to exact next word!)
     if (speechQueueRef.current.length > 0 && pausedChunkIndexRef.current < speechQueueRef.current.length) {
       isSpeechActiveRef.current = true;
       setIsSpeaking(true);
@@ -893,6 +981,10 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     speechIndexRef.current = 0;
     pausedTimeRef.current = 0;
     pausedChunkIndexRef.current = 0;
+    currentChunkTextRef.current = '';
+    currentWordCharOffsetRef.current = 0;
+    currentWordLengthRef.current = 0;
+    lastSpokenWordRef.current = '';
 
     if (activeAudioRef.current) {
       try {

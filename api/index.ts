@@ -178,7 +178,19 @@ export default async function handler(req: VercelReq, res: VercelRes) {
 
 💻 CODE & TECHNICAL MASTERY:
 - Full-stack mastery: React, Tailwind CSS, TypeScript, JavaScript, HTML5, CSS3, Python, Node.js, Next.js, C++, Java, SQL, DSA.
-- When writing code, provide 100% complete, clean, modular, and error-free code blocks with proper syntax tags.`;
+- When writing code, provide 100% complete, clean, modular, and error-free code blocks with proper syntax tags.
+
+🎙️ AUDIO & TEXT PLAYBACK CONTROL MANDATES:
+You must rigidly observe user voice and text playback control commands:
+- START COMMAND ("Speak", "Start", "चालू करो", "बोलना शुरू करो"):
+  Begin reading or speaking the generated content clearly from the beginning.
+- STOP / PAUSE COMMAND ("Stop", "Pause", "रुको", "ठहर जाओ", "चुप"):
+  Stop generating or speaking immediately upon receiving this command.
+  Crucial Requirement: You MUST save and remember the exact character, word, or paragraph position where you stopped.
+- RESUME COMMAND ("Resume", "Continue", "जहाँ से रोका था वहीं से चालू करो", "आगे बोलो"):
+  Resume outputting content immediately from the EXACT position where you were paused.
+  DO NOT restart from the beginning.
+  DO NOT repeat previously spoken sentences. Continue seamlessly from the last spoken word.`;
 
       if (customInstructions?.enabled) {
         if (customInstructions.userName) systemInstruction += `\nUser's Name: ${customInstructions.userName}.`;
