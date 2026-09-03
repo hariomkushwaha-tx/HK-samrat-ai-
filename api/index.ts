@@ -60,9 +60,21 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     });
   }
 
-  // Check API Key
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'dummy-key') {
+  // Multi-engine key detection (GEMINI_API_KEY, GROQ_API_KEY, or any variant)
+  const findEnv = (match: string): string => {
+    const matchUpper = match.toUpperCase();
+    for (const [k, v] of Object.entries(process.env)) {
+      if (v && k.toUpperCase().includes(matchUpper)) {
+        return (v as string).trim();
+      }
+    }
+    return '';
+  };
+
+  const geminiKey = process.env.GEMINI_API_KEY?.trim() || findEnv('GEMINI');
+  const groqKey = process.env.GROQ_API_KEY?.trim() || findEnv('GROQ');
+
+  if (!geminiKey && !groqKey) {
     if (urlPath.includes('chat') || isChat) {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
@@ -76,7 +88,14 @@ export default async function handler(req: VercelReq, res: VercelRes) {
   }
 
   try {
-    const ai = getGenAI();
+    const ai = geminiKey ? new GoogleGenAI({
+      apiKey: geminiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    }) : null;
 
     // 1. Prompt Enhancement
     if (isEnhance && !isChat) {
@@ -249,73 +268,142 @@ export default async function handler(req: VercelReq, res: VercelRes) {
       let fullText = '';
       const groundingSources: any[] = [];
 
-      for (const candidate of modelCandidates) {
-        try {
-          const config: any = {
-            systemInstruction,
-            temperature: Math.max(0.1, Math.min(2.0, temperature || 0.7)),
-          };
-
-          if (candidate.useSearch) {
-            config.tools = [{ googleSearch: {} }];
-          }
-
-          if (candidate.useThinking) {
-            config.thinkingConfig = {
-              thinkingLevel: 'LOW',
+      if (ai) {
+        for (const candidate of modelCandidates) {
+          try {
+            const config: any = {
+              systemInstruction,
+              temperature: Math.max(0.1, Math.min(2.0, temperature || 0.7)),
             };
-          }
 
-          sendEvent('start', { model: candidate.modelName });
-
-          const streamResult = await ai.models.generateContentStream({
-            model: candidate.modelName,
-            contents,
-            config,
-          });
-
-          for await (const chunk of streamResult) {
-            const chunkText = chunk.text || '';
-            if (chunkText) {
-              fullText += chunkText;
-              sendEvent('chunk', { text: chunkText });
+            if (candidate.useSearch) {
+              config.tools = [{ googleSearch: {} }];
             }
 
-            try {
-              const cand = chunk.candidates?.[0];
-              const searchChunks = cand?.groundingMetadata?.groundingChunks;
-              if (searchChunks && Array.isArray(searchChunks)) {
-                for (const sc of searchChunks) {
-                  if (sc.web?.uri && sc.web?.title) {
-                    groundingSources.push({
-                      title: sc.web.title,
-                      url: sc.web.uri,
-                      snippet: (sc.web as any)?.snippet || '',
-                    });
+            if (candidate.useThinking) {
+              config.thinkingConfig = {
+                thinkingLevel: 'LOW',
+              };
+            }
+
+            sendEvent('start', { model: candidate.modelName });
+
+            const streamResult = await ai.models.generateContentStream({
+              model: candidate.modelName,
+              contents,
+              config,
+            });
+
+            for await (const chunk of streamResult) {
+              const chunkText = chunk.text || '';
+              if (chunkText) {
+                fullText += chunkText;
+                sendEvent('chunk', { text: chunkText });
+              }
+
+              try {
+                const cand = chunk.candidates?.[0];
+                const searchChunks = cand?.groundingMetadata?.groundingChunks;
+                if (searchChunks && Array.isArray(searchChunks)) {
+                  for (const sc of searchChunks) {
+                    if (sc.web?.uri && sc.web?.title) {
+                      groundingSources.push({
+                        title: sc.web.title,
+                        url: sc.web.uri,
+                        snippet: (sc.web as any)?.snippet || '',
+                      });
+                    }
                   }
                 }
-              }
-            } catch {}
-          }
+              } catch {}
+            }
 
-          sendEvent('done', {
-            fullText,
-            groundingSources: groundingSources.filter(
-              (src, idx, arr) => arr.findIndex((x) => x.url === src.url) === idx
-            ),
+            sendEvent('done', {
+              fullText,
+              groundingSources: groundingSources.filter(
+                (src, idx, arr) => arr.findIndex((x) => x.url === src.url) === idx
+              ),
+            });
+
+            streamedSuccessfully = true;
+            break;
+          } catch (err: any) {
+            lastError = err;
+            console.warn(`Model candidate ${candidate.modelName} error on Vercel:`, err?.message);
+          }
+        }
+      }
+
+      // Seamless Groq fallback if Gemini was unavailable or encountered errors
+      if (!streamedSuccessfully && groqKey) {
+        try {
+          sendEvent('start', { model: 'llama-3.3-70b-versatile' });
+
+          const groqMessages = [
+            { role: 'system', content: systemInstruction },
+            ...recentMessages.map((m: any) => ({
+              role: m.role === 'assistant' ? 'assistant' : 'user',
+              content: m.content || '',
+            })),
+          ];
+
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${groqKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'llama-3.3-70b-versatile',
+              messages: groqMessages,
+              temperature: Math.max(0.1, Math.min(2.0, temperature || 0.7)),
+              stream: true,
+            }),
           });
 
-          streamedSuccessfully = true;
-          break;
-        } catch (err: any) {
-          lastError = err;
-          console.warn(`Model candidate ${candidate.modelName} error on Vercel:`, err?.message);
+          if (groqRes.ok && groqRes.body) {
+            const reader = groqRes.body.getReader();
+            const decoder = new TextDecoder();
+            let doneReading = false;
+            let groqFullText = '';
+
+            while (!doneReading) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              const chunkStr = decoder.decode(value, { stream: true });
+              const lines = chunkStr.split('\n');
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
+                  try {
+                    const parsed = JSON.parse(trimmed.slice(6));
+                    const textChunk = parsed.choices?.[0]?.delta?.content;
+                    if (textChunk) {
+                      streamedSuccessfully = true;
+                      groqFullText += textChunk;
+                      sendEvent('chunk', { text: textChunk });
+                    }
+                  } catch {}
+                }
+              }
+            }
+
+            if (streamedSuccessfully) {
+              sendEvent('done', {
+                fullText: groqFullText,
+                groundingSources: [],
+              });
+            }
+          }
+        } catch (groqErr) {
+          console.warn('Groq stream fallback error:', groqErr);
         }
       }
 
       if (!streamedSuccessfully) {
         sendEvent('error', {
-          message: 'HK Samrat AI सर्वर में तकनीकी समस्या या भारी लोड है। कृपया कुछ पलों में "Retry Message" दबाकर दोबारा प्रयास करें।',
+          message: 'HK Samrat AI सर्वर में तकनीकी समस्या आ रही है। कृपया "Retry Message" पर क्लिक करें।',
         });
       }
 
