@@ -11,6 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="application-name" content="HK Samrat AI" />
     <meta name="apple-mobile-web-app-title" content="HK Samrat AI" />
+    <link rel="canonical" href="https://hk-samrat-ai.vercel.app/" />
     <meta name="google-site-verification" content="googlece4b648b2f3f85ab" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -33,15 +34,40 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "HK Samrat AI",
-      "alternateName": ["HK Samrat", "HKSamratAI", "Samrat AI"],
-      "url": "https://hk-samrat-ai.vercel.app/",
-      "description": "HK Samrat AI is an advanced AI platform featuring high-speed generation, deep logical reasoning, real-time web intelligence, and voice synthesis.",
-      "author": {
-        "@type": "Person",
-        "name": "Hariom Kushwaha"
-      }
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://hk-samrat-ai.vercel.app/#website",
+          "url": "https://hk-samrat-ai.vercel.app/",
+          "name": "HK Samrat AI",
+          "alternateName": [
+            "HK Samrat",
+            "HKSamratAI",
+            "HK Samrat Artificial Intelligence"
+          ],
+          "description": "HK Samrat AI is an advanced multi-modal AI intelligence platform by Hariom Kushwaha.",
+          "inLanguage": "en-US",
+          "publisher": {
+            "@id": "https://hk-samrat-ai.vercel.app/#organization"
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://hk-samrat-ai.vercel.app/#organization",
+          "name": "HK Samrat AI",
+          "url": "https://hk-samrat-ai.vercel.app/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://hk-samrat-ai.vercel.app/icon-512.png",
+            "width": 512,
+            "height": 512
+          },
+          "founder": {
+            "@type": "Person",
+            "name": "Hariom Kushwaha"
+          }
+        }
+      ]
     }
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -49,7 +75,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-[#0A0A0A] text-[#F5F5F5] antialiased selection:bg-blue-500/30 selection:text-white">
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-prerender-shell" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0A0A0A; color: #F5F5F5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 24px;">
+        <img src="/icon-192.png" alt="HK Samrat AI Logo" width="80" height="80" style="border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); margin-bottom: 20px;" />
+        <h1 style="font-size: 2.25rem; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 10px 0; color: #FFFFFF;">HK Samrat AI</h1>
+        <p style="font-size: 1.05rem; color: #A1A1AA; max-width: 520px; margin: 0 0 28px 0; line-height: 1.6;">Unified AI Intelligence with ultra-fast generation, deep logical reasoning, real-time web intelligence, and multi-modal creative synthesis by Hariom Kushwaha.</p>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: #71717A; font-weight: 500;">
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3B82F6;"></span>
+          Initializing HK Samrat AI Experience...
+        </div>
+      </div>
+    </div>
+    <noscript>
+      <div style="padding: 32px 20px; text-align: center; background: #0A0A0A; color: #FFFFFF; font-family: sans-serif;">
+        <h1 style="font-size: 2rem; margin-bottom: 12px;">HK Samrat AI</h1>
+        <p style="color: #A1A1AA; max-width: 600px; margin: 0 auto 16px auto;">HK Samrat AI is an advanced AI intelligence platform featuring chat, logical reasoning, voice synthesis, image generation, and live canvas created by Hariom Kushwaha.</p>
+        <p><a href="/privacy.html" style="color: #60A5FA;">Privacy Policy</a></p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
