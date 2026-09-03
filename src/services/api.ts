@@ -49,13 +49,14 @@ export async function streamChat(options: StreamChatOptions): Promise<() => void
     });
 
     if (!response.ok) {
-      let errorDetails = `HTTP error! status: ${response.status}`;
+      let errorDetails = 'HK Samrat AI सर्वर में तकनीकी समस्या आ रही है। कृपया पुनः प्रयास करें।';
       try {
         const errorJson = await response.json();
-        if (errorJson.error) {
-          errorDetails = errorJson.error;
-        } else if (errorJson.message) {
-          errorDetails = errorJson.message;
+        const msg = errorJson.error || errorJson.message;
+        if (msg && typeof msg === 'string') {
+          if (!msg.includes('API_KEY') && !msg.includes('Google') && !msg.includes('gemini') && !msg.includes('Vercel')) {
+            errorDetails = msg;
+          }
         }
       } catch {}
       throw new Error(errorDetails);
@@ -118,7 +119,7 @@ export async function streamChat(options: StreamChatOptions): Promise<() => void
         processBuffer();
       } catch (err: any) {
         if (err.name !== 'AbortError') {
-          onError(err.message || 'Stream connection lost');
+          onError('HK Samrat AI सर्वर में समस्या आ रही है। कृपया कुछ पलों बाद "Retry Message" पर क्लिक करें।');
         }
       }
     };
@@ -126,7 +127,7 @@ export async function streamChat(options: StreamChatOptions): Promise<() => void
     readStream();
   } catch (err: any) {
     if (err.name !== 'AbortError') {
-      onError(err.message || 'Failed to connect to HK Samrat AI service');
+      onError('HK Samrat AI सर्वर में तकनीकी समस्या आ रही है। कृपया कुछ पलों बाद पुनः प्रयास करें।');
     }
   }
 

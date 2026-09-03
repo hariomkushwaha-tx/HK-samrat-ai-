@@ -67,12 +67,11 @@ export default async function handler(req: VercelReq, res: VercelRes) {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
-      res.write(`event: error\ndata: ${JSON.stringify({ message: 'GEMINI_API_KEY Vercel Settings me add karein. (Vercel Project -> Settings -> Environment Variables)' })}\n\n`);
+      res.write(`event: error\ndata: ${JSON.stringify({ message: 'HK Samrat AI सर्वर अभी व्यस्त है या तकनीकी मेंटेनेंस मोड में है। कृपया कुछ पलों बाद "Retry Message" पर क्लिक करें।' })}\n\n`);
       return res.end();
     }
-    return res.status(500).json({
-      error: 'GEMINI_API_KEY is not configured on Vercel.',
-      instructions: 'Go to Vercel Project -> Settings -> Environment Variables, add GEMINI_API_KEY, then Redeploy.',
+    return res.status(503).json({
+      error: 'HK Samrat AI Server is currently busy or undergoing scheduled maintenance. Please try again shortly.',
     });
   }
 
@@ -316,7 +315,7 @@ export default async function handler(req: VercelReq, res: VercelRes) {
 
       if (!streamedSuccessfully) {
         sendEvent('error', {
-          message: lastError?.message || 'The AI engine is temporarily busy. Please try again.',
+          message: 'HK Samrat AI सर्वर में तकनीकी समस्या या भारी लोड है। कृपया कुछ पलों में "Retry Message" दबाकर दोबारा प्रयास करें।',
         });
       }
 

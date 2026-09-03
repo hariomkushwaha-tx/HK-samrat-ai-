@@ -307,21 +307,29 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
               <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-spin" />
               <span>Generating response...</span>
             </div>
-          ) : content.startsWith('⚠️') || content.includes('Rate limit') || content.includes('quota') || content.includes('high demand') || content.includes('UNAVAILABLE') ? (
+          ) : content.startsWith('⚠️') || content.includes('Rate limit') || content.includes('quota') || content.includes('high demand') || content.includes('UNAVAILABLE') || content.includes('तकनीकी') ? (
             <div className="my-2 p-4 rounded-xl bg-[#140F0F] border border-amber-900/40 text-amber-200/90 text-xs space-y-3">
               <div className="flex items-start gap-2.5">
                 <span className="text-base shrink-0">⚠️</span>
                 <div className="space-y-1">
                   <p className="font-semibold text-amber-300">
-                    {content.includes('high demand') ? 'Temporary High Demand Notice' : 'Service Notice'}
+                    HK Samrat AI Notice
                   </p>
-                  <p className="text-amber-200/80 leading-relaxed">{content.replace(/^⚠️\s*/, '')}</p>
+                  <p className="text-amber-200/80 leading-relaxed">
+                    {(() => {
+                      const clean = content.replace(/^⚠️\s*/, '');
+                      if (clean.includes('API_KEY') || clean.includes('GEMINI') || clean.includes('gemini') || clean.includes('apiKey') || clean.includes('Vercel')) {
+                        return 'HK Samrat AI सर्वर में तकनीकी समस्या आ रही है। कृपया कुछ पलों बाद "Retry Message" पर क्लिक करें।';
+                      }
+                      return clean;
+                    })()}
+                  </p>
                 </div>
               </div>
               <div className="pt-2 border-t border-amber-900/30 flex items-center gap-2">
                 <button
                   onClick={() => regenerateMessage(message.id)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 font-mono text-[11px] uppercase transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 font-mono text-[11px] uppercase transition-all cursor-pointer"
                 >
                   <RotateCw className="w-3 h-3" />
                   <span>Retry Message</span>

@@ -69,51 +69,22 @@ app.get('/sitemap.xml', (req, res) => {
 
 // Clean error message parser helper
 function formatApiError(error: any): string {
-  if (!error) return 'An unexpected error occurred. Please try again.';
+  if (!error) return 'HK Samrat AI सर्वर में तकनीकी समस्या आई है। कृपया "Retry Message" पर क्लिक करें।';
   const rawMsg = error.message || String(error);
 
-  // Check if rawMsg contains embedded JSON from @google/genai ApiError
-  try {
-    const jsonMatch = rawMsg.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const innerMsg = parsed?.error?.message || parsed?.message;
-      if (innerMsg) {
-        if (typeof innerMsg === 'string' && innerMsg.includes('{')) {
-          try {
-            const innerParsed = JSON.parse(innerMsg.slice(innerMsg.indexOf('{')));
-            if (innerParsed?.error?.message) {
-              const code = innerParsed.error.code || parsed.error?.code;
-              if (code === 503 || innerParsed.error.status === 'UNAVAILABLE' || innerParsed.error.message?.includes('high demand')) {
-                return 'The AI engine is temporarily experiencing high demand. Please try again in a few moments.';
-              }
-              if (code === 429 || innerParsed.error.status === 'RESOURCE_EXHAUSTED') {
-                return 'API rate limit or quota temporarily reached. Please wait a moment and click Retry.';
-              }
-              return innerParsed.error.message;
-            }
-          } catch {}
-        }
-        if (parsed.error?.code === 503 || parsed.error?.status === 'UNAVAILABLE' || String(innerMsg).includes('high demand')) {
-          return 'The AI engine is temporarily experiencing high demand. Please try again in a few moments.';
-        }
-        if (parsed.error?.code === 429 || parsed.error?.status === 'RESOURCE_EXHAUSTED') {
-          return 'API rate limit or quota temporarily reached. Please wait a moment and click Retry.';
-        }
-        return innerMsg;
-      }
-    }
-  } catch {}
-
-  if (rawMsg.includes('503') || rawMsg.includes('UNAVAILABLE') || rawMsg.includes('high demand')) {
-    return 'The AI engine is temporarily experiencing high demand. Please try again in a few moments.';
+  if (rawMsg.includes('API_KEY') || rawMsg.includes('api_key') || rawMsg.includes('apiKey') || rawMsg.includes('API key')) {
+    return 'HK Samrat AI सर्वर अभी कनेक्ट नहीं हो पा रहा है या मेंटेनेंस मोड में है। कृपया कुछ पलों में पुनः प्रयास करें।';
   }
 
-  if (rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('quota')) {
-    return 'API rate limit or quota temporarily reached. Please wait a few moments and click Retry.';
+  if (rawMsg.includes('503') || rawMsg.includes('UNAVAILABLE') || rawMsg.includes('high demand') || rawMsg.includes('overloaded')) {
+    return 'HK Samrat AI सर्वर पर अभी भारी ट्रैफिक है। कृपया कुछ ही सेकंड में "Retry Message" पर क्लिक करें।';
   }
 
-  return rawMsg.replace(/(\n|\r)+/g, ' ').slice(0, 300);
+  if (rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('quota') || rawMsg.includes('rate limit')) {
+    return 'HK Samrat AI सर्वर लिमिट रिफ्रेश हो रही है। कृपया कुछ पलों में दोबारा प्रयास करें।';
+  }
+
+  return 'HK Samrat AI सर्वर में तकनीकी समस्या आई है। कृपया "Retry Message" पर क्लिक करके पुनः प्रयास करें।';
 }
 
 // Prompt enhancement endpoint

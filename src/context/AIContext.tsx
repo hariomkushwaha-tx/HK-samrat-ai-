@@ -543,6 +543,26 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         }
       },
       onError: (errMsg: string) => {
+        let displayError = errMsg;
+        if (
+          !displayError ||
+          displayError.includes('API_KEY') ||
+          displayError.includes('GEMINI') ||
+          displayError.includes('gemini') ||
+          displayError.includes('apiKey') ||
+          displayError.includes('Vercel') ||
+          displayError.includes('500') ||
+          displayError.includes('Internal Server Error')
+        ) {
+          displayError = 'HK Samrat AI सर्वर में तकनीकी समस्या आ रही है। कृपया कुछ पलों बाद "Retry Message" पर क्लिक करें।';
+        } else if (
+          displayError.includes('503') ||
+          displayError.includes('UNAVAILABLE') ||
+          displayError.includes('high demand')
+        ) {
+          displayError = 'HK Samrat AI सर्वर पर अभी भारी ट्रैफिक है। कृपया कुछ पलों बाद दोबारा प्रयास करें।';
+        }
+
         setSessions((prev) =>
           prev.map((s) => {
             if (s.id !== targetSessionId) return s;
@@ -550,7 +570,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
               if (m.id === assistantMessageId) {
                 return {
                   ...m,
-                  content: m.content || `⚠️ HK Samrat AI Error: ${errMsg}`,
+                  content: m.content || `⚠️ ${displayError}`,
                   isStreaming: false,
                 };
               }
