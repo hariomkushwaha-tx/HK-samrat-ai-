@@ -147,6 +147,8 @@ export default async function handler(req: VercelReq, res: VercelRes) {
         enableThinkingProcess = false,
         temperature = 0.7,
         customInstructions,
+        clientTime,
+        clientTimeZone,
       } = body;
 
       if (!messages || messages.length === 0) {
@@ -154,7 +156,57 @@ export default async function handler(req: VercelReq, res: VercelRes) {
         return res.end();
       }
 
+      // Compute live real-time date and time (Indian Standard Time / User Timezone)
+      const clientDateObj = clientTime ? new Date(clientTime) : new Date();
+      const effectiveZone = clientTimeZone || 'Asia/Kolkata';
+
+      let formattedDateEn = '';
+      let formattedDateHi = '';
+      let formattedTime = '';
+      let currentYear = '';
+      try {
+        formattedDateEn = clientDateObj.toLocaleDateString('en-IN', {
+          timeZone: effectiveZone,
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        formattedDateHi = clientDateObj.toLocaleDateString('hi-IN', {
+          timeZone: effectiveZone,
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        formattedTime = clientDateObj.toLocaleTimeString('en-IN', {
+          timeZone: effectiveZone,
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+        currentYear = clientDateObj.toLocaleDateString('en-IN', {
+          timeZone: effectiveZone,
+          year: 'numeric',
+        });
+      } catch {
+        formattedDateEn = new Date().toDateString();
+        formattedDateHi = formattedDateEn;
+        formattedTime = new Date().toTimeString();
+        currentYear = String(new Date().getFullYear());
+      }
+
       let systemInstruction = `You are "HK Samrat AI" (एचके सम्राट एआई) — an ultra-intelligent, friendly, fast, and authoritative unified AI platform engineered with state-of-the-art neural intelligence.
+
+📅 LIVE REAL-TIME DATE & TIME (TEMPORAL ACCURACY MANDATE):
+- Current Live Date (Hindi): ${formattedDateHi}
+- Current Live Date (English): ${formattedDateEn}
+- Current Live Time: ${formattedTime} (${effectiveZone})
+- Current Live Year: ${currentYear}
+CRITICAL INSTRUCTION:
+- Whenever the user asks about today's date, day, month, time, or current year (e.g., "आज कितनी तारीख है", "आज कौन सा दिन है", "What is today's date?", "What year is it?", "तारीख बताओ"):
+  ALWAYS answer using the exact real-time live date and time given above.
+- NEVER assume or output an outdated date or year from LLM training cutoff (like 2024 or older). Today's real date is ${formattedDateHi} (${formattedDateEn}).
 
 👑 CREATOR & DEVELOPER IDENTITY (Core DNA):
 - Name: HK Samrat AI (एचके सम्राट एआई)
@@ -250,8 +302,18 @@ You must rigidly observe user voice and text playback control commands:
         contents.push({ role: 'user', parts: [{ text: 'Hi' }] });
       }
 
+      // Check if user query asks for real-time / current world events, news, or latest facts
+      const latestUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || '';
+      const realTimeTriggers = [
+        'आज', 'कल', 'दुनिया में क्या चल रहा', 'ताजा खबर', 'खबर', 'न्यूज', 'news', 'latest',
+        'current', 'weather', 'मौसम', 'match', 'score', 'cricket', 'election', 'चुनाव',
+        'price', 'rate', 'भाव', 'stock', 'शेयर', 'gold', 'सोना', 'चांदी', 'trending',
+        'world', 'today', 'now', 'real time', 'realtime', 'हाल ही में', 'अभी', 'घटना'
+      ];
+      const isAutoRealTimeQuery = realTimeTriggers.some((kw) => latestUserMessage.includes(kw));
+
       const isReasoner = enableThinkingProcess || model === 'samrat-reasoner';
-      const isSearch = enableSearchGrounding || model === 'samrat-search';
+      const isSearch = enableSearchGrounding || model === 'samrat-search' || isAutoRealTimeQuery;
 
       const modelCandidates = isReasoner
         ? [

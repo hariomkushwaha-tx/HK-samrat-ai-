@@ -31,6 +31,9 @@ export async function streamChat(options: StreamChatOptions): Promise<() => void
   } = options;
 
   try {
+    const clientTime = new Date().toISOString();
+    const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
+
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
@@ -45,6 +48,8 @@ export async function streamChat(options: StreamChatOptions): Promise<() => void
         thinkingEffort,
         temperature,
         customInstructions,
+        clientTime,
+        clientTimeZone,
       }),
     });
 
