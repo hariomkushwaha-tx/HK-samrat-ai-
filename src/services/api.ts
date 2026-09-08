@@ -172,8 +172,9 @@ export async function generateImagineArt(prompt: string, style: string, aspectRa
 
 export interface NeuralTTSResponse {
   audioData?: string;
+  audioUrl?: string;
   mimeType?: string;
-  source?: 'gemini_neural' | 'browser';
+  source?: 'samrat_neural' | 'samrat_expressive_neural' | 'samrat_master_neural' | 'browser' | string;
   voice?: string;
   fallbackToBrowser?: boolean;
 }

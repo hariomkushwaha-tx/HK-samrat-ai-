@@ -83,10 +83,26 @@ export const ImagineStudio: React.FC = () => {
   };
 
   const handleDownloadImage = (img: GeneratedImage) => {
-    const a = document.createElement('a');
-    a.href = img.imageUrl;
-    a.download = `hk_samrat_imagine_${Date.now()}.png`;
-    a.click();
+    try {
+      if (img.imageUrl.startsWith('data:')) {
+        const a = document.createElement('a');
+        a.href = img.imageUrl;
+        a.download = `hk_samrat_photo_${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(img.imageUrl)}`;
+        const a = document.createElement('a');
+        a.href = proxyUrl;
+        a.download = `hk_samrat_photo_${Date.now()}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (e) {
+      window.open(img.imageUrl, '_blank');
+    }
   };
 
   return (

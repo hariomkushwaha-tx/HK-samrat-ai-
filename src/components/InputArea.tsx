@@ -27,6 +27,7 @@ export const InputArea: React.FC = () => {
     setActiveModel,
     settings,
     updateSettings,
+    setImagineOpen,
   } = useAI();
 
   const [input, setInput] = useState('');
@@ -306,6 +307,19 @@ export const InputArea: React.FC = () => {
               <Sparkles className="w-3 h-3 text-purple-400" />
               <span className="hidden sm:inline text-[10px] uppercase">
                 {isEnhancing ? 'Enhancing...' : 'Enhance'}
+              </span>
+            </button>
+
+            {/* Quick Photo Studio Button */}
+            <button
+              id="input-photo-studio-btn"
+              onClick={() => setImagineOpen(true)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono border border-blue-500/30 bg-blue-950/25 hover:bg-blue-900/40 text-blue-300 hover:text-white transition-all cursor-pointer"
+              title="Open HK Samrat AI Imagine Photo Studio"
+            >
+              <ImageIcon className="w-3 h-3 text-blue-400" />
+              <span className="hidden sm:inline text-[10px] uppercase tracking-wider">
+                Photo Studio
               </span>
             </button>
 

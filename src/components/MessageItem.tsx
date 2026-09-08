@@ -24,9 +24,11 @@ import {
   Globe,
   BrainCircuit,
   Loader2,
+  Download,
 } from 'lucide-react';
 import { ChatMessage, GroundingSource } from '../types';
 import { useAI } from '../context/AIContext';
+import { InlineImagineCard } from './InlineImagineCard';
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -80,7 +82,23 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     return { thought: message.thoughtProcess || null, content: raw };
   };
 
-  const { thought, content } = extractThoughtAndContent(message.content);
+  const { thought, content: rawWithoutThought } = extractThoughtAndContent(message.content);
+
+  // Helper to extract [IMAGINE_GENERATE: ...] tags
+  const extractImaginePrompts = (text: string) => {
+    const regex = /\[IMAGINE_GENERATE:\s*([^\]]+)\]/gi;
+    const prompts: string[] = [];
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      if (match[1]?.trim()) {
+        prompts.push(match[1].trim());
+      }
+    }
+    const cleanContent = text.replace(/\[IMAGINE_GENERATE:\s*[^\]]+\]/gi, '').trim();
+    return { prompts, cleanContent };
+  };
+
+  const { prompts: imaginePrompts, cleanContent: content } = extractImaginePrompts(rawWithoutThought);
 
   // Custom Markdown components
   const markdownComponents = {
@@ -93,6 +111,81 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         const canPreviewInCanvas = ['html', 'jsx', 'tsx', 'react', 'svg', 'js', 'javascript', 'css'].includes(
           lang.toLowerCase()
         );
+        const isSvg = lang.toLowerCase() === 'svg' && codeString.includes('<svg');
+
+        if (isSvg) {
+          return (
+            <div className="my-4 rounded-xl overflow-hidden border border-[#2B2B2B] bg-[#0A0A0A] shadow-lg font-mono">
+              <div className="flex items-center justify-between px-3.5 py-2 bg-[#141414] border-b border-[#262626] text-[10px] text-[#888]">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-emerald-400 uppercase tracking-widest">🎨 Live Vector Graphic (SVG)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const blob = new Blob([codeString], { type: 'image/svg+xml;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `hk-vector-graphic-${Date.now()}.svg`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer"
+                    title="Download vector graphic as SVG file"
+                  >
+                    <Download className="w-2.5 h-2.5" />
+                    <span>Download SVG</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      openCanvas({
+                        title: 'SVG Graphic Sandbox',
+                        type: 'svg',
+                        code: codeString,
+                      });
+                    }}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1C1C1C] hover:bg-[#282828] text-blue-300 border border-[#333] transition-colors cursor-pointer"
+                    title="Open Live Preview in Canvas"
+                  >
+                    <Play className="w-2.5 h-2.5 fill-blue-400 text-blue-400" />
+                    <span>Canvas</span>
+                  </button>
+                  <button
+                    onClick={() => handleCopyCode(codeString, Math.random())}
+                    className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+                    title="Copy code"
+                  >
+                    {copiedCodeIndex !== null ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span className="text-emerald-400">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="p-6 bg-[#111111] flex items-center justify-center border-b border-[#262626] min-h-[220px]">
+                <div
+                  className="max-w-md w-full flex items-center justify-center [&>svg]:w-full [&>svg]:max-h-[300px] [&>svg]:h-auto drop-shadow-md"
+                  dangerouslySetInnerHTML={{ __html: codeString }}
+                />
+              </div>
+              <div className="p-3 overflow-x-auto text-xs font-mono text-[#888] leading-relaxed custom-scrollbar bg-[#0A0A0A] max-h-36">
+                <pre>
+                  <code>{codeString}</code>
+                </pre>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="my-3 rounded-xl overflow-hidden border border-[#262626] bg-[#0A0A0A] shadow-sm font-mono">
@@ -318,7 +411,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                   <p className="text-amber-200/80 leading-relaxed">
                     {(() => {
                       const clean = content.replace(/^⚠️\s*/, '');
-                      if (clean.includes('API_KEY') || clean.includes('GEMINI') || clean.includes('gemini') || clean.includes('apiKey') || clean.includes('Vercel')) {
+                      if (clean.includes('API_KEY') || clean.includes('GEMINI') || clean.includes('gemini') || clean.includes('apiKey') || clean.includes('Google') || clean.includes('google') || clean.includes('openai') || clean.includes('OpenAI') || clean.includes('groq') || clean.includes('Vercel')) {
                         return 'HK Samrat AI सर्वर में तकनीकी समस्या आ रही है। कृपया कुछ पलों बाद "Retry Message" पर क्लिक करें।';
                       }
                       return clean;
@@ -344,6 +437,19 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
               >
                 {content}
               </ReactMarkdown>
+            </div>
+          )}
+
+          {/* Inline AI Photo Studio Cards */}
+          {imaginePrompts.length > 0 && (
+            <div className="space-y-4 my-3">
+              {imaginePrompts.map((promptText, pIdx) => (
+                <InlineImagineCard
+                  key={pIdx}
+                  prompt={promptText}
+                  autoGenerate={true}
+                />
+              ))}
             </div>
           )}
         </div>

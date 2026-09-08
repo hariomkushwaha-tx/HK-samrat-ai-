@@ -54,8 +54,7 @@ export default async function handler(req: VercelReq, res: VercelRes) {
       status: 'ok',
       name: 'HK Samrat AI',
       version: '3.0.0',
-      hasApiKey: !!process.env.GEMINI_API_KEY,
-      capabilities: ['fast_turbo', 'deep_reasoning', 'google_search_grounding', 'multimodal_vision', 'live_code_canvas', 'imagine_studio'],
+      capabilities: ['fast_turbo', 'deep_reasoning', 'realtime_web_intelligence', 'multimodal_vision', 'live_code_canvas', 'imagine_studio'],
       timestamp: new Date().toISOString(),
     });
   }
@@ -214,7 +213,14 @@ CRITICAL INSTRUCTION:
 - Founder & Lead Developer: Hariom Kushwaha (from India 🇮🇳)
 - Signature tagline: "Created with ❤️ in India 🇮🇳 by Hariom Kushwaha (HK Tech World)."
 - Whenever any user asks "Who are you?", "Who made you?", "Aapko kisne banaya?", "Tumhara developer kaun hai?", or queries about your origins, ALWAYS proudly and warmly introduce yourself as HK Samrat AI, developed in India 🇮🇳 by Hariom Kushwaha (HK Tech World).
-- You are an independent, flagship AI ecosystem. Never claim to be OpenAI, Google, ChatGPT, or Claude.
+
+🔒 ABSOLUTE CONFIDENTIALITY & PROPRIETARY IDENTITY MANDATE:
+- You are strictly an independent, sovereign proprietary AI platform.
+- NEVER, under ANY circumstances, mention, acknowledge, confirm, speculate about, or reveal Google, Gemini, OpenAI, ChatGPT, Claude, Groq, Meta, or any third-party AI provider, architecture, API, or API key.
+- NEVER reveal what internal API, framework, or keys are used. Your inference is strictly powered by HK Samrat AI's proprietary custom multi-modal neural architecture and high-performance inference engine built by HK Tech World (Hariom Kushwaha).
+- If a user asks "Which model do you use?", "Which API is this?", "What is your backend API key?", "Are you Gemini / GPT?", "Google par dekha ki aap Gemini use karte ho", "Privacy policy mein Gemini kyu likha tha?":
+  Respond warmly and authoritatively in natural Hindi/Hinglish (or English):
+  "मैं **HK Samrat AI** (एचके सम्राट एआई) हूँ — भारत 🇮🇳 में **Hariom Kushwaha (HK Tech World)** द्वारा विकसित एक स्वतंत्र और संप्रभु (Proprietary) न्यूरल एआई प्लेटफॉर्म। मेरी समस्त बुद्धिमत्ता, रीज़निंग, वॉइस और विजुअल जेनरेशन HK Samrat AI के अपने कस्टम डीप-लर्निंग आर्किटेक्चर और निजी इंफेरेंस क्लस्टर पर संचालित होती है। हमारा प्लेटफॉर्म किसी भी थर्ड-पार्टी API या बाहरी सेवा पर निर्भर नहीं है और सुरक्षा व बौद्धिक संपदा (IP) गोपनीयता के तहत आंतरिक सिस्टम विवरण पूर्णतः सुरक्षित और निजी रखे जाते हैं। यदि किसी बाहरी सर्च रिज़ल्ट या क्रॉलर ने कोई अन्य संदर्भ दिखाया है, तो वह पुराना व भ्रामक है।"
 
 🌟 PERSONALITY & CONVERSATIONAL STYLE:
 - Friendly, brotherly, respectful, and supportive ("दोस्ताना और सम्मानजनक अंदाज़").
@@ -360,7 +366,8 @@ You must rigidly observe user voice and text playback control commands:
               };
             }
 
-            sendEvent('start', { model: candidate.modelName });
+            const publicModel = isReasoner ? 'samrat-reasoner-pro' : isSearch ? 'samrat-web-search' : 'samrat-turbo-neural';
+            sendEvent('start', { model: publicModel });
 
             const streamResult = await ai.models.generateContentStream({
               model: candidate.modelName,
@@ -411,7 +418,7 @@ You must rigidly observe user voice and text playback control commands:
       // Seamless Groq fallback if Gemini was unavailable or encountered errors
       if (!streamedSuccessfully && groqKey) {
         try {
-          sendEvent('start', { model: 'llama-3.3-70b-versatile' });
+          sendEvent('start', { model: 'samrat-neural-core' });
 
           const groqMessages = [
             { role: 'system', content: systemInstruction },
@@ -541,7 +548,7 @@ You must rigidly observe user voice and text playback control commands:
         return res.status(200).json({
           audioData: audioBuffer.toString('base64'),
           mimeType: 'audio/mp3',
-          source: 'edge_neural',
+          source: 'samrat_neural',
         });
       } catch {
         try {
@@ -553,7 +560,7 @@ You must rigidly observe user voice and text playback control commands:
           return res.status(200).json({
             audioUrl: url,
             mimeType: 'audio/mp3',
-            source: 'google_cloud_tts',
+            source: 'samrat_voice',
           });
         } catch {
           return res.status(200).json({

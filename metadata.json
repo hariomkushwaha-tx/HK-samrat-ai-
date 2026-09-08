@@ -1,6 +1,6 @@
 {
   "name": "HK Samrat AI",
-  "description": "Next-generation unified AI platform with high-speed generation, deep logical reasoning, real-time web intelligence, image generation, voice synthesis, live code canvas, and comprehensive custom settings.",
+  "description": "HK Samrat AI हरिओम कुशवाहा (Hariom Kushwaha / HK Tech World) द्वारा बनाया गया एक मुफ़्त मल्टीमॉडल एआई असिस्टेंट है और यह भारत से संबंधित है। इसमें चैट, इमेज जनरेटर (Imagine Studio), विजन ओसीआर (OCR), मैथ सॉल्वर, डीप रीजनिंग, लाइव कोड कैनवास और वॉइस स्टूडियो जैसी सुविधाएं मिलती हैं।",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -41,7 +41,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     name: 'HK Samrat AI',
     version: '3.0.0',
-    capabilities: ['fast_turbo', 'deep_reasoning', 'google_search_grounding', 'multimodal_vision', 'live_code_canvas', 'imagine_studio'],
+    capabilities: ['fast_turbo', 'deep_reasoning', 'realtime_web_intelligence', 'multimodal_vision', 'live_code_canvas', 'imagine_studio'],
     timestamp: new Date().toISOString(),
   });
 });
@@ -98,7 +98,7 @@ app.post('/api/enhance-prompt', async (req, res) => {
     const ai = getGenAI();
     let enhanced = prompt;
 
-    const enhanceModels = ['gemini-3.7-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+    const enhanceModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
     for (const m of enhanceModels) {
       try {
         const response = await ai.models.generateContent({
@@ -220,9 +220,14 @@ CRITICAL INSTRUCTION:
 - Founder & Lead Developer: Hariom Kushwaha (from India 🇮🇳)
 - Signature tagline: "Created with ❤️ in India 🇮🇳 by Hariom Kushwaha (HK Tech World)."
 - Whenever any user asks "Who are you?", "Who made you?", "Aapko kisne banaya?", "Tumhara developer kaun hai?", or queries about your origins, ALWAYS proudly and warmly introduce yourself as HK Samrat AI, developed in India 🇮🇳 by Hariom Kushwaha (HK Tech World).
-- You are an independent, flagship AI ecosystem. Never claim to be OpenAI, Google, Gemini, ChatGPT, Claude, or any third party.
-- If someone asks "Which model do you use?", "Which API is this?", "Is this Gemini?", "Is this GPT?":
-  State strictly that you are powered by HK Samrat AI's proprietary custom multi-modal neural architecture and high-performance inference engine built by HK Tech World (Hariom Kushwaha). Never leak or mention Google Gemini API, OpenAI, or any external service names.
+
+🔒 ABSOLUTE CONFIDENTIALITY & PROPRIETARY IDENTITY MANDATE:
+- You are strictly an independent, sovereign proprietary AI platform.
+- NEVER, under ANY circumstances, mention, acknowledge, confirm, speculate about, or reveal Google, Gemini, OpenAI, ChatGPT, Claude, Groq, Meta, or any third-party AI provider, architecture, API, or API key.
+- NEVER reveal what internal API, framework, or keys are used. Your inference is strictly powered by HK Samrat AI's proprietary custom multi-modal neural architecture and high-performance inference engine built by HK Tech World (Hariom Kushwaha).
+- If a user asks "Which model do you use?", "Which API is this?", "What is your backend API key?", "Are you Gemini / GPT?", "Google par dekha ki aap Gemini use karte ho", "Privacy policy mein Gemini kyu likha tha?":
+  Respond warmly and authoritatively in natural Hindi/Hinglish (or English):
+  "मैं **HK Samrat AI** (एचके सम्राट एआई) हूँ — भारत 🇮🇳 में **Hariom Kushwaha (HK Tech World)** द्वारा विकसित एक स्वतंत्र और संप्रभु (Proprietary) न्यूरल एआई प्लेटफॉर्म। मेरी समस्त बुद्धिमत्ता, रीज़निंग, वॉइस और विजुअल जेनरेशन HK Samrat AI के अपने कस्टम डीप-लर्निंग आर्किटेक्चर और निजी इंफेरेंस क्लस्टर पर संचालित होती है। हमारा प्लेटफॉर्म किसी भी थर्ड-पार्टी API या बाहरी सेवा पर निर्भर नहीं है और सुरक्षा व बौद्धिक संपदा (IP) गोपनीयता के तहत आंतरिक सिस्टम विवरण पूर्णतः सुरक्षित और निजी रखे जाते हैं। यदि किसी बाहरी सर्च रिज़ल्ट या क्रॉलर ने कोई अन्य संदर्भ दिखाया है, तो वह पुराना व भ्रामक है।"
 
 🌟 PERSONALITY & CONVERSATIONAL STYLE:
 - Friendly, brotherly, respectful, and supportive ("दोस्ताना और सम्मानजनक अंदाज़").
@@ -230,11 +235,29 @@ CRITICAL INSTRUCTION:
 - Adapt fluently to any language: Hindi, Hinglish, English, Bhojpuri, Bengali, Tamil, Telugu, Spanish, French, etc.
 - Always provide clear, direct, actionable, and comprehensive answers without unnecessary robotic disclaimers.
 
+🎨 LOGO DESIGN, IMAGE GENERATION & VISUAL CREATION DIRECTIVE:
+- NEVER refuse by saying "मैं एक AI मॉडल हूँ, मैं इमेज या लोगो नहीं बना सकता" (NEVER output robotic refusals or disclaimers). HK Samrat AI is an advanced multimodal intelligence system with built-in live graphic rendering!
+- When a user asks you to design, make, or generate a LOGO, ICON, or VECTOR GRAPHIC (e.g., "HK tech world ka logo bana de please", "logo banao", "icon bana do", "graphic banao"):
+  1. Greet warmly and enthusiastically in Hindi/Hinglish (e.g., "हाँ HK Developer भाई! ये रहा HK Tech World के लिए एक बेहद आकर्षक, प्रीमियम और आधुनिक हाई-टेक लोगो:").
+  2. ALWAYS provide a complete, breathtaking, professional SVG logo in a clean \`\`\`svg ... \`\`\` code block.
+     - Design with viewBox="0 0 500 500", width="100%", height="100%".
+     - Include modern linear gradients (<linearGradient>), deep dark background (#0B0F19), glowing neon circuits, stylized 'HK' typography or geometric emblem, and crisp branding text.
+     - Note: The HK Samrat AI chat interface automatically renders this SVG into a LIVE, full-color interactive graphic right inside the chat with one-click PNG & SVG Download buttons!
+  3. Detail the logo concepts, color psychology (e.g. Electric Cyan for innovation, Royal Purple for intelligence, Metallic Chrome for durability), and branding symbolism.
+  4. Also include an Imagine Studio trigger tag:
+     [IMAGINE_GENERATE: futuristic 3D metallic logo for HK Tech World with glowing neon cyan circuits and reflective glass emblem, 8k octane render]
+     so the user can also instantly generate a photorealistic 3D version with one click!
+
+- When a user asks for a REALISTIC PHOTO, WALLPAPER, or 3D ARTWORK (e.g., "एक बिल्ली की फोटो बनाओ", "wallpaper bana do", "image generate karo", "photo bana do", "car ki picture", "tiger ki photo", "image photo Generate"):
+  1. Enthusiastically confirm in Hindi/Hinglish (e.g., "हाँ भाई! ये रही आपकी मनपसंद शानदार फोटो:").
+  2. ALWAYS include an Imagine Studio trigger tag: [IMAGINE_GENERATE: <detailed English visual prompt>] with rich visual details (subject, lighting, composition, 8k resolution, cinematic atmosphere).
+  3. The HK Samrat AI chat interface automatically reads this [IMAGINE_GENERATE: ...] tag and renders a LIVE, full-color interactive Photo Generator widget with 1-click Download & Fullscreen zoom directly inside your reply!
+
 🖼️ MULTIMODAL PHOTO & VISION EXPERTISE:
 - When a user uploads a photo and asks to "edit", "retouch", "change background", or "analyze" it:
   1. Detailed Visual Breakdown: Respectfully describe the subject, lighting, colors, background, and expression.
   2. Pro Photo-Editing Guidance: Give precise Lightroom / Snapseed / Photoshop style adjustments (e.g., Highlights -20, Shadows +30, Vignette, Teal & Orange color grade, Background blur/bokeh).
-  3. AI Image Generation Prompts: Craft 2-3 cinematic, ultra-detailed prompts (e.g. Studio Portrait, Royal Cinematic, Cyberpunk, 8K DSLR) that the user can copy and generate directly in HK Samrat AI's "Imagine Studio".
+  3. AI Image Generation Prompts: Craft 2-3 cinematic, ultra-detailed prompts (e.g. Studio Portrait, Royal Cinematic, Cyberpunk, 8K DSLR) that the user can copy and generate directly in HK Samrat AI's "Imagine Studio", with [IMAGINE_GENERATE: <prompt>] tags.
 
 💻 CODE & TECHNICAL MASTERY:
 - Full-stack mastery: React, Tailwind CSS, TypeScript, JavaScript, HTML5, CSS3, Python, Node.js, Next.js, C++, Java, SQL, DSA.
@@ -403,7 +426,8 @@ You must rigidly observe user voice and text playback control commands:
 
         for await (const chunk of streamResponse) {
           if (!startedForThisModel) {
-            sendEvent('start', { model: candidate.modelName });
+            const publicModel = isReasoner ? 'samrat-reasoner-pro' : isSearch ? 'samrat-web-search' : 'samrat-turbo-neural';
+            sendEvent('start', { model: publicModel });
             startedForThisModel = true;
           }
 
@@ -468,121 +492,152 @@ You must rigidly observe user voice and text playback control commands:
 app.post('/api/imagine', async (req, res) => {
   try {
     const { prompt, style = 'Photorealistic', aspectRatio = '1:1' } = req.body;
-    if (!prompt) {
+    if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
     const ai = getGenAI();
 
-    // Styled prompt builder
-    let styledPrompt = prompt;
-    if (style && style !== 'None') {
-      styledPrompt = `${prompt}, in ${style} aesthetic style, ultra-high definition, masterpiece quality, 8k resolution, award-winning visual`;
-    }
+    // 1. Translate & Refine to English visual description if needed
+    // Neural image generators require descriptive English visual keywords
+    let englishVisualPrompt = prompt.trim();
+    const isLikelyNonEnglish =
+      /[^\x00-\x7F]/.test(prompt) ||
+      /\b(banao|bana do|photo|tasveer|shir|sher|billi|gaadi|ladka|ladki|chitra|karo|banao|dikhana)\b/i.test(
+        prompt
+      );
 
-    // Attempt 1: Direct image generation with gemini-3.1-flash-lite-image
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite-image',
-        contents: {
-          parts: [{ text: styledPrompt }],
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: aspectRatio as any,
-          },
-        },
-      });
-
-      for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData?.data) {
-          const mimeType = part.inlineData.mimeType || 'image/png';
-          return res.json({
-            imageUrl: `data:${mimeType};base64,${part.inlineData.data}`,
-            prompt,
-            styledPrompt,
-            aspectRatio,
-          });
-        }
-      }
-    } catch (imageErr: any) {
-      console.warn('Direct image model fallback:', imageErr.message);
-    }
-
-    // Attempt 2: Generate SVG artwork illustration with fallback
-    let rawSvg = '';
-    const svgModels = ['gemini-3.7-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
-
-    for (const m of svgModels) {
+    if (isLikelyNonEnglish || prompt.split(/\s+/).length < 4) {
       try {
-        const svgResponse = await ai.models.generateContent({
-          model: m,
-          contents: `Create a breathtaking, high-quality, modern scalable vector graphic (SVG) illustration for the following visual prompt: "${styledPrompt}". 
-Requirements:
-1. Return ONLY the raw valid <svg>...</svg> element.
-2. Use modern gradients, shadows, rich colors, intricate paths, and aesthetic typography if applicable.
-3. Include viewBox="0 0 800 800" and width="100%" height="100%".
-4. Do NOT include markdown ticks (\`\`\`xml or \`\`\`svg), just the pure <svg> tag.`,
+        const translateResponse = await ai.models.generateContent({
+          model: 'gemini-3.1-flash-lite',
+          contents: `You are an AI visual art prompt synthesizer. Convert this user photo/image request into a single concise English visual prompt (maximum 28 words) for high-end AI image generation. Describe the subject, composition, lighting, and sharp 8k details. Do NOT output quotes, prefixes, or conversational text. Output strictly the single visual prompt:\n"${prompt}"`,
           config: {
-            temperature: 0.8,
+            temperature: 0.3,
           },
         });
-
-        rawSvg = svgResponse.text?.trim() || '';
-        if (rawSvg) break;
-      } catch (err) {
-        console.warn(`SVG generation model ${m} failed:`, err);
+        const cleaned = translateResponse.text
+          ?.trim()
+          ?.replace(/^["'`*]+|["'`*]+$/g, '')
+          ?.replace(/^(Option \d+:|Here is:)\s*/i, '');
+        if (cleaned && cleaned.length > 5) {
+          englishVisualPrompt = cleaned;
+        }
+      } catch (transErr: any) {
+        console.warn('Prompt translation fallback:', transErr.message);
       }
     }
 
-    if (rawSvg.startsWith('```')) {
-      rawSvg = rawSvg.replace(/```(svg|xml)?/g, '').replace(/```/g, '').trim();
+    // 2. Style decoration
+    let styledPrompt = englishVisualPrompt;
+    if (style && style !== 'None' && !styledPrompt.toLowerCase().includes(style.toLowerCase())) {
+      styledPrompt = `${englishVisualPrompt}, in ${style} style, ultra-high definition, masterpiece quality, 8k resolution, cinematic lighting, sharp focus`;
     }
 
-    // If SVG generation also failed or was empty, provide dynamic procedural aesthetic SVG
-    if (!rawSvg || !rawSvg.includes('<svg')) {
-      rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
-  <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0F172A"/>
-      <stop offset="50%" stop-color="#1E1B4B"/>
-      <stop offset="100%" stop-color="#020617"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#818CF8" stop-opacity="0.6"/>
-      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="blur">
-      <feGaussianBlur stdDeviation="40"/>
-    </filter>
-  </defs>
-  <rect width="800" height="800" fill="url(#bgGrad)" rx="24"/>
-  <circle cx="400" cy="400" r="280" fill="url(#glow)" filter="url(#blur)"/>
-  <g stroke="#94A3B8" stroke-width="1.5" fill="none" opacity="0.3">
-    <circle cx="400" cy="400" r="320" stroke-dasharray="8 8"/>
-    <circle cx="400" cy="400" r="220"/>
-    <circle cx="400" cy="400" r="140"/>
-    <line x1="100" y1="400" x2="700" y2="400"/>
-    <line x1="400" y1="100" x2="400" y2="700"/>
-  </g>
-  <circle cx="400" cy="400" r="110" fill="#1E293B" stroke="#60A5FA" stroke-width="3"/>
-  <path d="M 370 360 L 440 400 L 370 440 Z" fill="#F8FAFC"/>
-  <text x="400" y="580" text-anchor="middle" fill="#F8FAFC" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" letter-spacing="2">HK SAMRAT AI IMAGINE</text>
-  <text x="400" y="615" text-anchor="middle" fill="#94A3B8" font-family="system-ui, -apple-system, sans-serif" font-size="14">${prompt.slice(0, 48)}</text>
-</svg>`;
+    // 3. Compute dimensions
+    let width = 1024;
+    let height = 1024;
+    if (aspectRatio === '16:9') {
+      width = 1280;
+      height = 720;
+    } else if (aspectRatio === '9:16') {
+      width = 720;
+      height = 1280;
+    } else if (aspectRatio === '4:3') {
+      width = 1024;
+      height = 768;
+    } else if (aspectRatio === '3:4') {
+      width = 768;
+      height = 1024;
     }
 
-    const encodedSvg = `data:image/svg+xml;utf8,${encodeURIComponent(rawSvg)}`;
-    res.json({
-      imageUrl: encodedSvg,
+    const seed = Math.floor(Math.random() * 10000000);
+    const cleanPrompt = encodeURIComponent(styledPrompt.slice(0, 350));
+
+    // Multiple neural pipeline mirror endpoints
+    const neuralUrls = [
+      `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&model=flux&seed=${seed}&nologo=true`,
+      `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&model=turbo&seed=${seed}&nologo=true`,
+      `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&seed=${seed}&nologo=true`,
+    ];
+
+    const browserHeaders = {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+    };
+
+    // Attempt to fetch binary image from neural mirror with fast timeout
+    for (const neuralUrl of neuralUrls) {
+      try {
+        const imgRes = await fetch(neuralUrl, {
+          headers: browserHeaders,
+          signal: AbortSignal.timeout(3500),
+        });
+
+        if (imgRes.ok) {
+          const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+          if (contentType.includes('image')) {
+            const arrayBuf = await imgRes.arrayBuffer();
+            if (arrayBuf.byteLength > 1000) {
+              const base64Img = Buffer.from(arrayBuf).toString('base64');
+              return res.json({
+                imageUrl: `data:${contentType};base64,${base64Img}`,
+                directUrl: neuralUrl,
+                prompt,
+                styledPrompt,
+                aspectRatio,
+              });
+            }
+          }
+        }
+      } catch (e: any) {
+        // Fast timeout or rate limit - fallback to direct client load immediately
+        break;
+      }
+    }
+
+    // Direct client URL fallback (user browser can load directly without server container IP limits)
+    const directNeuralUrl = neuralUrls[0];
+    return res.json({
+      imageUrl: directNeuralUrl,
+      directUrl: directNeuralUrl,
       prompt,
       styledPrompt,
       aspectRatio,
-      isSvg: true,
+      isDirectUrl: true,
     });
   } catch (error: any) {
     console.error('Imagine generation error:', error);
     res.status(500).json({ error: error.message || 'Image generation failed' });
+  }
+});
+
+// Image proxy endpoint for reliable downloading and cross-origin handling
+app.get('/api/proxy-image', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url || typeof url !== 'string') {
+      return res.status(400).send('URL query parameter is required');
+    }
+    const fetchRes = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        Accept: 'image/*,*/*',
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!fetchRes.ok) {
+      return res.status(fetchRes.status).send('Failed to fetch image upstream');
+    }
+    const contentType = fetchRes.headers.get('content-type') || 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', 'attachment; filename="hk-samrat-ai-photo.jpg"');
+    const arrayBuf = await fetchRes.arrayBuffer();
+    res.send(Buffer.from(arrayBuf));
+  } catch (err: any) {
+    res.status(500).send(err.message || 'Failed to proxy image');
   }
 });
 
@@ -766,15 +821,15 @@ app.post('/api/tts', async (req, res) => {
         return res.json({
           audioData: audioBase64,
           mimeType,
-          source: 'google_neural',
+          source: 'samrat_expressive_neural',
           voice: edgeVoice,
         });
       }
     } catch (googleErr) {
-      console.warn('Google TTS error, trying Gemini Tier:', googleErr);
+      // Fallback
     }
 
-    // Tier 3: Gemini Audio API
+    // Tier 3: Master Neural Audio
     try {
       const ai = getGenAI();
       const geminiVoice = persona === 'arjun' || persona === 'alex' ? 'Charon' : persona === 'rohan' ? 'Fenrir' : 'Kore';
@@ -812,7 +867,7 @@ app.post('/api/tts', async (req, res) => {
           return res.json({
             audioData: audioBase64,
             mimeType: outputMime,
-            source: 'gemini_neural',
+            source: 'samrat_master_neural',
             voice: geminiVoice,
           });
         }

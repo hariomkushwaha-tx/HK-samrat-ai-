@@ -593,6 +593,12 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           displayError.includes('GEMINI') ||
           displayError.includes('gemini') ||
           displayError.includes('apiKey') ||
+          displayError.includes('Google') ||
+          displayError.includes('google') ||
+          displayError.includes('openai') ||
+          displayError.includes('OpenAI') ||
+          displayError.includes('groq') ||
+          displayError.includes('GROQ') ||
           displayError.includes('Vercel') ||
           displayError.includes('500') ||
           displayError.includes('Internal Server Error')

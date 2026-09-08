@@ -224,7 +224,7 @@ export const Header: React.FC = () => {
               ? 'bg-[#1A1A1A] border border-blue-500/50 text-blue-400'
               : 'bg-[#141414] border border-[#262626] text-[#888] hover:text-white hover:bg-[#1A1A1A]'
           }`}
-          title="Toggle Google Real-Time Search Grounding"
+          title="Toggle Real-Time Web Intelligence Grounding"
         >
           <Globe className="w-3.5 h-3.5 text-blue-400" />
           <span className="text-[11px]">Web Search</span>
