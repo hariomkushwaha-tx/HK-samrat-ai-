@@ -873,13 +873,21 @@ export const SettingsModal: React.FC = () => {
                   <p className="text-xs text-[#888] leading-relaxed mt-2 font-sans">
                     HK Samrat AI is built by <span className="text-white font-semibold">HK Tech World</span>. Custom-engineered to deliver ultra-fast streaming speed, deep analytical reasoning, live real-time web grounding, and an interactive multimodal code canvas.
                   </p>
-                  <div className="mt-3 pt-3 border-t border-[#222] flex flex-col gap-1">
+                  <div className="mt-3 pt-3 border-t border-[#222] flex flex-col gap-1.5">
                     <p className="text-xs text-[#AAA]">
                       Created with ❤️ in India 🇮🇳 by <span className="text-white font-semibold">Hariom Kushwaha</span> (HK Tech World)
                     </p>
-                    <p className="text-[11px] font-mono text-blue-400/90">
-                      Powered by HK Tech World | Developed with ❤️ in India 🇮🇳 by Hariom Kushwaha
-                    </p>
+                    <div className="flex items-center justify-between text-[11px] pt-1">
+                      <span className="font-mono text-blue-400/90">HK Tech World &bull; Version 3.0 Pro</span>
+                      <a
+                        href="/privacy.html"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 underline font-mono text-xs"
+                      >
+                        Privacy Policy &amp; Terms &rarr;
+                      </a>
+                    </div>
                   </div>
                 </div>
 

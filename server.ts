@@ -906,6 +906,21 @@ app.post('/api/tts', async (req, res) => {
   }
 });
 
+// Serve ads.txt directly for Google AdSense crawler verification
+app.get('/ads.txt', (_req, res) => {
+  const publicAdsPath = path.join(process.cwd(), 'public', 'ads.txt');
+  const distAdsPath = path.join(process.cwd(), 'dist', 'ads.txt');
+  const targetPath = fs.existsSync(publicAdsPath) ? publicAdsPath : distAdsPath;
+
+  if (fs.existsSync(targetPath)) {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.sendFile(targetPath);
+  } else {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.send('google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0\n');
+  }
+});
+
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');

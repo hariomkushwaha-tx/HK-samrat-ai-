@@ -282,7 +282,15 @@ export const Sidebar: React.FC = () => {
           <div className="flex flex-col gap-1 text-[10px] font-mono px-1">
             <div className="flex items-center justify-between text-[#666]">
               <span>HK Samrat AI Pro</span>
-              <span>HK Tech World</span>
+              <a
+                href="/privacy.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-blue-400 underline transition-colors"
+                title="Privacy Policy"
+              >
+                Privacy Policy
+              </a>
             </div>
             <div className="text-[9px] text-[#555] text-center">
               Developed with ❤️ in India 🇮🇳 by Hariom Kushwaha
