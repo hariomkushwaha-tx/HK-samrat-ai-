@@ -20,10 +20,14 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
   const [adError, setAdError] = useState(false);
   const pushedRef = useRef(false);
 
-  const isConfigured = ADSENSE_CONFIG.clientId && !ADSENSE_CONFIG.clientId.includes('XXXXXXXX');
+  const isConfigured =
+    ADSENSE_CONFIG.clientId &&
+    !ADSENSE_CONFIG.clientId.includes('XXXXXXXX') &&
+    slot &&
+    slot !== '1234567890';
 
   useEffect(() => {
-    if (!ADSENSE_CONFIG.enabled || pushedRef.current) return;
+    if (!ADSENSE_CONFIG.enabled || !isConfigured || pushedRef.current) return;
 
     try {
       if (typeof window !== 'undefined') {
@@ -35,9 +39,9 @@ export const AdSenseBanner: React.FC<AdSenseBannerProps> = ({
     } catch {
       setAdError(true);
     }
-  }, []);
+  }, [isConfigured]);
 
-  if (!ADSENSE_CONFIG.enabled || adError) {
+  if (!ADSENSE_CONFIG.enabled || !isConfigured || adError) {
     return null;
   }
 

@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useAI } from '../context/AIContext';
 import { AIModelType } from '../types';
-import { AdSenseBanner } from './AdSenseBanner';
 
 export const WelcomeScreen: React.FC = () => {
   const { sendMessage, setActiveModel, setImagineOpen } = useAI();
@@ -117,9 +116,6 @@ export const WelcomeScreen: React.FC = () => {
           );
         })}
       </div>
-
-      {/* Google AdSense Placement */}
-      <AdSenseBanner className="mt-5 w-full" />
     </div>
   );
 };
