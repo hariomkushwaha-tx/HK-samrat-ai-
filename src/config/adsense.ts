@@ -10,7 +10,7 @@ export const ADSENSE_CONFIG = {
   clientId:
     (typeof import.meta !== 'undefined' &&
       (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_ADSENSE_CLIENT_ID) ||
-    'ca-pub-XXXXXXXXXXXXXXXX',
+    'ca-pub-3347352682783898',
 
   // Default Display Ad Unit Slot ID (from your Google AdSense -> Ads -> By ad unit)
   defaultSlotId:

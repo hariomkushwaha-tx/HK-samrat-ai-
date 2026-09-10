@@ -917,7 +917,7 @@ app.get('/ads.txt', (_req, res) => {
     res.sendFile(targetPath);
   } else {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.send('google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0\n');
+    res.send('google.com, pub-3347352682783898, DIRECT, f08c47fec0942fa0\n');
   }
 });
 
