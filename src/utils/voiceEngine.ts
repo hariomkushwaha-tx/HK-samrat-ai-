@@ -157,6 +157,27 @@ const HINDI_PHONETIC_REPLACEMENTS: [RegExp, string][] = [
   [/\bSmart\b/gi, 'स्मार्ट'],
 ];
 
+// Strip 100% of emojis, pictographs, symbols, flags, variation selectors, and modifiers
+export function stripAllEmojis(text: string): string {
+  if (!text) return '';
+  return text
+    // Comprehensive Unicode Extended Pictographic property (covers smileys, objects, people, animals, symbols)
+    .replace(/\p{Extended_Pictographic}/gu, '')
+    // Unicode Emoji property
+    .replace(/\p{Emoji_Presentation}/gu, '')
+    // Regional Indicator symbols (country flags e.g. India, US)
+    .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')
+    // All Supplementary Symbols, Pictographs, Emoticons, Transport, Weather, Activities, Objects
+    .replace(/[\u{1F000}-\u{1FAFF}]/gu, '')
+    // Miscellaneous symbols, Dingbats, Geometric shapes, Arrows
+    .replace(/[\u{2300}-\u{27BF}]/gu, '')
+    .replace(/[\u{2B50}-\u{2B55}]/gu, '')
+    // Variation selectors (VS15, VS16) and Zero-Width Joiner (ZWJ) that cause TTS voices to pronounce emoji names
+    .replace(/[\uFE0E\uFE0F\u200D\u200B\u200C]/gu, '')
+    // Replace excessive spaces with single space
+    .replace(/[ \t]+/g, ' ');
+}
+
 // Clean markdown, code blocks, raw URLs and excessive punctuation for natural speech
 export function cleanTextForSpeech(text: string): string {
   if (!text) return '';
@@ -166,8 +187,14 @@ export function cleanTextForSpeech(text: string): string {
   let cleaned = text
     // Remove thought process blocks if any
     .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
-    // Remove emojis that cause robotic speech synthesizer to speak emoji names
-    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
+    // Remove ALL emojis and pictographic symbols so speech engines never speak emoji descriptions
+    .replace(/\p{Extended_Pictographic}/gu, '')
+    .replace(/\p{Emoji_Presentation}/gu, '')
+    .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')
+    .replace(/[\u{1F000}-\u{1FAFF}]/gu, '')
+    .replace(/[\u{2300}-\u{27BF}]/gu, '')
+    .replace(/[\u{2B50}-\u{2B55}]/gu, '')
+    .replace(/[\uFE0E\uFE0F\u200D\u200B\u200C]/gu, '')
     // Replace code blocks with natural audio pauses
     .replace(/```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g, () => {
       return hasHindi ? '। यहाँ कोड स्निपेट दिया गया है। ' : '. Here is the code snippet. ';

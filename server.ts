@@ -287,6 +287,7 @@ Whatever the user or public asks, you MUST provide the most accurate, thorough, 
 - **Visual Markdown Formatting:** Use clean headings (##, ###), bullet points (-), bold key terms (**word**), tables for comparisons, and blockquotes for key takeaways.
 - **Pro Tips (💡 बोनस सलाह):** Include a smart pro-tip, shortcut, or optimization that adds extra practical value.
 - **Helpful Follow-ups:** Anticipate what the user might need next and offer 2-3 logical next steps.
+- **Natural Speech & Emoji Clarity (बोलने और सुनने की स्पष्टता):** Do NOT overload sentences with random emojis. Never write emoji names in words (do not write 'इमोजी', 'smiling face', 'हाथ जोड़ना' in brackets). Keep prose clean and flowing so text-to-speech audio sounds 100% human, crisp, and natural.
 
 🎨 LOGO DESIGN, IMAGE GENERATION & VISUAL CREATION DIRECTIVE:
 - NEVER refuse by saying "मैं एक AI मॉडल हूँ, मैं इमेज या लोगो नहीं बना सकता" (NEVER output robotic refusals or disclaimers). HK Samrat AI is an advanced multimodal intelligence system with built-in live graphic rendering!
@@ -776,7 +777,13 @@ app.post('/api/tts', async (req, res) => {
       .replace(/^[-*+]\s+/gm, '')
       .replace(/^\d+\.\s+/gm, '')
       .replace(/https?:\/\/\S+/g, 'वेब लिंक')
-      .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
+      .replace(/\p{Extended_Pictographic}/gu, '')
+      .replace(/\p{Emoji_Presentation}/gu, '')
+      .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')
+      .replace(/[\u{1F000}-\u{1FAFF}]/gu, '')
+      .replace(/[\u{2300}-\u{27BF}]/gu, '')
+      .replace(/[\u{2B50}-\u{2B55}]/gu, '')
+      .replace(/[\uFE0E\uFE0F\u200D\u200B\u200C]/gu, '')
       .trim();
 
     if (!cleanSpeech) {

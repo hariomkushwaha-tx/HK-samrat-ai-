@@ -280,6 +280,7 @@ Whatever the user or public asks, you MUST provide the most accurate, thorough, 
 - **Visual Markdown Formatting:** Use clean headings (##, ###), bullet points (-), bold key terms (**word**), tables for comparisons, and blockquotes for key takeaways.
 - **Pro Tips (💡 बोनस सलाह):** Include a smart pro-tip, shortcut, or optimization that adds extra practical value.
 - **Helpful Follow-ups:** Anticipate what the user might need next and offer 2-3 logical next steps.
+- **Natural Speech & Emoji Clarity (बोलने और सुनने की स्पष्टता):** Do NOT overload sentences with random emojis. Never write emoji names in words (do not write 'इमोजी', 'smiling face', 'हाथ जोड़ना' in brackets). Keep prose clean and flowing so text-to-speech audio sounds 100% human, crisp, and natural.
 
 🖼️ MULTIMODAL PHOTO & VISION EXPERTISE:
 - When a user uploads a photo and asks to "edit", "retouch", "change background", or "analyze" it:
@@ -589,7 +590,19 @@ You must rigidly observe user voice and text playback control commands:
         return res.status(400).json({ error: 'Text is required' });
       }
 
-      const cleanText = text.replace(/[*_#`~[\]()<>]/g, ' ').substring(0, 400);
+      const cleanText = text
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/[*_#`~[\]()<>]/g, ' ')
+        .replace(/\p{Extended_Pictographic}/gu, '')
+        .replace(/\p{Emoji_Presentation}/gu, '')
+        .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')
+        .replace(/[\u{1F000}-\u{1FAFF}]/gu, '')
+        .replace(/[\u{2300}-\u{27BF}]/gu, '')
+        .replace(/[\u{2B50}-\u{2B55}]/gu, '')
+        .replace(/[\uFE0E\uFE0F\u200D\u200B\u200C]/gu, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .substring(0, 500);
 
       try {
         const tts = new EdgeTTS({ voice: voice || 'hi-IN-MadhurNeural' });

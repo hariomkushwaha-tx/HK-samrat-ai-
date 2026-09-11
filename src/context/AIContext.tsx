@@ -11,6 +11,7 @@ import {
 import { streamChat, synthesizeNeuralSpeech } from '../services/api';
 import {
   chunkTextForSpeech,
+  cleanTextForSpeech,
   resolveBestVoice,
   chimeSynthesizer,
   VOICE_PERSONAS,
@@ -823,10 +824,11 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       chimeSynthesizer.play('voice_start');
     }
 
-    // Try high-definition server-side Neural AI voice first
+    // Try high-definition server-side Neural AI voice first with emoji & markdown cleaned text
     try {
+      const cleanSpokenText = cleanTextForSpeech(text);
       const res = await synthesizeNeuralSpeech(
-        text,
+        cleanSpokenText || text,
         settings.voice.persona || 'aaradhya',
         settings.voice.voiceName
       );
