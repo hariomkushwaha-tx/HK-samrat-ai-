@@ -842,6 +842,34 @@ You must rigidly observe user voice and text playback control commands:
 });
 
 // Imagine Studio Image Generation
+// Helper to search ultra high-resolution real photographs from Wikimedia Commons archive
+async function searchWikimediaPhotos(query: string): Promise<{ url: string; title: string }[]> {
+  try {
+    const cleanQuery = query.replace(/[^\w\s]/g, ' ').trim().slice(0, 60);
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=6&prop=imageinfo&iiprop=url|size|mime&format=json`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'HKSamratAI/2.0 (contact: hkdeveloperh@gmail.com)' },
+      signal: AbortSignal.timeout(3500),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as any;
+    const pages = data.query?.pages || {};
+    const results: { url: string; title: string }[] = [];
+    for (const pid of Object.keys(pages)) {
+      const page = pages[pid];
+      const ii = page.imageinfo?.[0];
+      if (ii && ii.url && (ii.mime?.includes('jpeg') || ii.mime?.includes('png') || ii.mime?.includes('webp'))) {
+        if ((ii.width && ii.width >= 500) || !ii.width) {
+          results.push({ url: ii.url, title: page.title || '' });
+        }
+      }
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
 app.post('/api/imagine', async (req, res) => {
   try {
     const { prompt, style = 'Photorealistic', aspectRatio = '1:1' } = req.body;
@@ -852,11 +880,11 @@ app.post('/api/imagine', async (req, res) => {
     const ai = getGenAI();
 
     // 1. Translate & Refine to English visual description if needed
-    // Neural image generators require descriptive English visual keywords
     let englishVisualPrompt = prompt.trim();
+    let searchSubject = prompt.trim();
     const isLikelyNonEnglish =
       /[^\x00-\x7F]/.test(prompt) ||
-      /\b(banao|bana do|photo|tasveer|shir|sher|billi|gaadi|ladka|ladki|chitra|karo|banao|dikhana)\b/i.test(
+      /\b(banao|bana do|photo|tasveer|shir|sher|billi|gaadi|ladka|ladki|chitra|karo|banao|dikhana|car|wallpaper)\b/i.test(
         prompt
       );
 
@@ -864,22 +892,33 @@ app.post('/api/imagine', async (req, res) => {
       try {
         const translateResponse = await ai.models.generateContent({
           model: 'gemini-3.1-flash-lite',
-          contents: `You are an AI visual art prompt synthesizer. Convert this user photo/image request into a single concise English visual prompt (maximum 28 words) for high-end AI image generation. Describe the subject, composition, lighting, and sharp 8k details. Do NOT output quotes, prefixes, or conversational text. Output strictly the single visual prompt:\n"${prompt}"`,
+          contents: `You are an expert visual art prompt director like Midjourney/DALL-E 3. 
+Given this user photo request, output a JSON object with:
+1. "visualPrompt": A rich, vivid English visual prompt (under 30 words) describing the subject, lighting, angle, and 8k details.
+2. "searchSubject": The core 2-4 English subject keywords (e.g. "Bengal tiger", "futuristic sports car", "sunset over mountains").
+
+User Request: "${prompt}"
+
+Output strict JSON: {"visualPrompt": "...", "searchSubject": "..."}`,
           config: {
             temperature: 0.3,
+            responseMimeType: 'application/json',
           },
         });
-        const cleaned = translateResponse.text
-          ?.trim()
-          ?.replace(/^["'`*]+|["'`*]+$/g, '')
-          ?.replace(/^(Option \d+:|Here is:)\s*/i, '');
-        if (cleaned && cleaned.length > 5) {
-          englishVisualPrompt = cleaned;
+        const parsed = JSON.parse(translateResponse.text || '{}');
+        if (parsed.visualPrompt && parsed.visualPrompt.length > 5) {
+          englishVisualPrompt = parsed.visualPrompt;
+        }
+        if (parsed.searchSubject && parsed.searchSubject.length > 2) {
+          searchSubject = parsed.searchSubject;
         }
       } catch (transErr: any) {
         console.warn('Prompt translation fallback:', transErr.message);
       }
     }
+
+    // Parallel search for high-res real photograph fallback from verified archive
+    const photoSearchPromise = searchWikimediaPhotos(searchSubject || englishVisualPrompt);
 
     // 2. Style decoration
     let styledPrompt = englishVisualPrompt;
@@ -887,77 +926,33 @@ app.post('/api/imagine', async (req, res) => {
       styledPrompt = `${englishVisualPrompt}, in ${style} style, ultra-high definition, masterpiece quality, 8k resolution, cinematic lighting, sharp focus`;
     }
 
-    // 3. Compute dimensions
-    let width = 1024;
-    let height = 1024;
-    if (aspectRatio === '16:9') {
-      width = 1280;
-      height = 720;
-    } else if (aspectRatio === '9:16') {
-      width = 720;
-      height = 1280;
-    } else if (aspectRatio === '4:3') {
-      width = 1024;
-      height = 768;
-    } else if (aspectRatio === '3:4') {
-      width = 768;
-      height = 1024;
-    }
-
     const seed = Math.floor(Math.random() * 10000000);
-    const cleanPrompt = encodeURIComponent(styledPrompt.slice(0, 350));
+    const cleanPrompt = encodeURIComponent(styledPrompt.slice(0, 260));
 
-    // Multiple neural pipeline mirror endpoints
-    const neuralUrls = [
-      `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&model=flux&seed=${seed}&nologo=true`,
-      `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&model=turbo&seed=${seed}&nologo=true`,
-      `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&seed=${seed}&nologo=true`,
+    // Neural mirror endpoints (fast, clean, without heavy params that trigger 429)
+    const neuralMirrors = [
+      `https://image.pollinations.ai/prompt/${cleanPrompt}?nologo=true`,
+      `https://image.pollinations.ai/prompt/${cleanPrompt}?model=turbo&nologo=true`,
+      `https://image.pollinations.ai/prompt/${cleanPrompt}?model=sana&nologo=true`,
+      `https://image.pollinations.ai/prompt/${cleanPrompt}?seed=${seed}&nologo=true`,
     ];
 
-    const browserHeaders = {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-    };
+    // Await photo search results
+    const realPhotos = await photoSearchPromise.catch(() => []);
+    const fallbackPhotoUrl = realPhotos[0]?.url || null;
+    const curatedPhotos = realPhotos.slice(0, 4).map((p) => p.url);
 
-    // Attempt to fetch binary image from neural mirror with fast timeout
-    for (const neuralUrl of neuralUrls) {
-      try {
-        const imgRes = await fetch(neuralUrl, {
-          headers: browserHeaders,
-          signal: AbortSignal.timeout(3500),
-        });
-
-        if (imgRes.ok) {
-          const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
-          if (contentType.includes('image')) {
-            const arrayBuf = await imgRes.arrayBuffer();
-            if (arrayBuf.byteLength > 1000) {
-              const base64Img = Buffer.from(arrayBuf).toString('base64');
-              return res.json({
-                imageUrl: `data:${contentType};base64,${base64Img}`,
-                directUrl: neuralUrl,
-                prompt,
-                styledPrompt,
-                aspectRatio,
-              });
-            }
-          }
-        }
-      } catch (e: any) {
-        // Fast timeout or rate limit - fallback to direct client load immediately
-        break;
-      }
-    }
-
-    // Direct client URL fallback (user browser can load directly without server container IP limits)
-    const directNeuralUrl = neuralUrls[0];
     return res.json({
-      imageUrl: directNeuralUrl,
-      directUrl: directNeuralUrl,
+      imageUrl: neuralMirrors[0],
+      directUrl: neuralMirrors[0],
+      neuralMirrors,
+      fallbackPhotoUrl,
+      curatedPhotos,
       prompt,
       styledPrompt,
+      searchSubject,
       aspectRatio,
+      style,
       isDirectUrl: true,
     });
   } catch (error: any) {
@@ -979,10 +974,11 @@ app.get('/api/proxy-image', async (req, res) => {
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         Accept: 'image/*,*/*',
       },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(10000),
     });
     if (!fetchRes.ok) {
-      return res.status(fetchRes.status).send('Failed to fetch image upstream');
+      // If upstream proxy fails, redirect user browser directly to source URL
+      return res.redirect(url);
     }
     const contentType = fetchRes.headers.get('content-type') || 'image/jpeg';
     res.setHeader('Content-Type', contentType);
@@ -990,6 +986,9 @@ app.get('/api/proxy-image', async (req, res) => {
     const arrayBuf = await fetchRes.arrayBuffer();
     res.send(Buffer.from(arrayBuf));
   } catch (err: any) {
+    if (req.query.url && typeof req.query.url === 'string') {
+      return res.redirect(req.query.url);
+    }
     res.status(500).send(err.message || 'Failed to proxy image');
   }
 });

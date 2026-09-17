@@ -64,11 +64,14 @@ export const ImagineStudio: React.FC = () => {
     setIsGenerating(true);
     try {
       const result = await generateImagineArt(prompt, style, aspectRatio);
+      const chosenUrl = result.imageUrl || result.fallbackPhotoUrl || (result.neuralMirrors && result.neuralMirrors[0]);
+      if (!chosenUrl) throw new Error('No image returned from engine');
+
       const newImg: GeneratedImage = {
         id: 'img_' + Date.now(),
         prompt,
         enhancedPrompt: result.styledPrompt,
-        imageUrl: result.imageUrl,
+        imageUrl: chosenUrl,
         style,
         aspectRatio,
         createdAt: Date.now(),
@@ -82,7 +85,7 @@ export const ImagineStudio: React.FC = () => {
     }
   };
 
-  const handleDownloadImage = (img: GeneratedImage) => {
+  const handleDownloadImage = async (img: GeneratedImage) => {
     try {
       if (img.imageUrl.startsWith('data:')) {
         const a = document.createElement('a');
@@ -91,16 +94,36 @@ export const ImagineStudio: React.FC = () => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-      } else {
-        const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(img.imageUrl)}`;
-        const a = document.createElement('a');
-        a.href = proxyUrl;
-        a.download = `hk_samrat_photo_${Date.now()}.jpg`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        return;
       }
-    } catch (e) {
+
+      // Try direct blob download with no-referrer
+      try {
+        const res = await fetch(img.imageUrl, { referrerPolicy: 'no-referrer' });
+        if (res.ok) {
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `hk_samrat_photo_${Date.now()}.jpg`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(blobUrl);
+          return;
+        }
+      } catch {
+        // Continue to proxy
+      }
+
+      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(img.imageUrl)}`;
+      const a = document.createElement('a');
+      a.href = proxyUrl;
+      a.download = `hk_samrat_photo_${Date.now()}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
       window.open(img.imageUrl, '_blank');
     }
   };
@@ -252,6 +275,7 @@ export const ImagineStudio: React.FC = () => {
                   <img
                     src={activeImage.imageUrl}
                     alt={activeImage.prompt}
+                    referrerPolicy="no-referrer"
                     className="w-full max-h-[460px] object-contain rounded-xl"
                   />
                 </div>
@@ -289,7 +313,12 @@ export const ImagineStudio: React.FC = () => {
                               : 'border-[#262626] opacity-60 hover:opacity-100'
                           }`}
                         >
-                          <img src={img.imageUrl} alt="" className="w-full h-full object-cover" />
+                          <img
+                            src={img.imageUrl}
+                            alt=""
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                          />
                         </button>
                       ))}
                     </div>
