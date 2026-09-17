@@ -38,12 +38,12 @@ import {
 } from '../utils/voiceEngine';
 
 const DEFAULT_INSTRUCTIONS: CustomInstructions = {
-  enabled: true,
-  userBio: 'I am a passionate builder, student, and creator looking for fast, top-tier AI assistance.',
-  responsePreferences: 'Provide clear, actionable, deep yet concise responses with code examples when needed.',
-  userName: 'HK Developer',
+  enabled: false,
+  userBio: '',
+  responsePreferences: '',
+  userName: '',
   preferredLanguage: 'auto',
-  preferredTone: 'professional',
+  preferredTone: 'friendly',
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -176,7 +176,22 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_SETTINGS);
-      return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : DEFAULT_SETTINGS;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Sanitize legacy hardcoded 'HK Developer' from previous default settings
+        if (parsed.customInstructions?.userName === 'HK Developer') {
+          parsed.customInstructions.userName = '';
+          parsed.customInstructions.enabled = false;
+        }
+        if (parsed.customInstructions?.userBio?.includes('passionate builder, student, and creator looking for fast, top-tier AI assistance')) {
+          parsed.customInstructions.userBio = '';
+        }
+        if (parsed.customInstructions?.responsePreferences?.includes('Provide clear, actionable, deep yet concise responses with code examples')) {
+          parsed.customInstructions.responsePreferences = '';
+        }
+        return { ...DEFAULT_SETTINGS, ...parsed };
+      }
+      return DEFAULT_SETTINGS;
     } catch {
       return DEFAULT_SETTINGS;
     }
