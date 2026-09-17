@@ -400,7 +400,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
               <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-spin" />
               <span>Generating response...</span>
             </div>
-          ) : content.startsWith('⚠️') || content.includes('Rate limit') || content.includes('quota') || content.includes('high demand') || content.includes('UNAVAILABLE') || content.includes('तकनीकी') ? (
+          ) : content.startsWith('⚠️') || (content.length < 300 && (content.includes('तकनीकी समस्या आई है') || content.includes('तकनीकी समस्या आ रही है') || content.includes('Rate limit') || content.includes('RESOURCE_EXHAUSTED') || content.includes('Service Unavailable') || content.includes('UNAVAILABLE'))) ? (
             <div className="my-2 p-4 rounded-xl bg-[#140F0F] border border-amber-900/40 text-amber-200/90 text-xs space-y-3">
               <div className="flex items-start gap-2.5">
                 <span className="text-base shrink-0">⚠️</span>

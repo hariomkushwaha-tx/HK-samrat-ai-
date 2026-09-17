@@ -707,7 +707,8 @@ You must rigidly observe user voice and text playback control commands:
       'आज', 'कल', 'दुनिया में क्या चल रहा', 'ताजा खबर', 'खबर', 'न्यूज', 'news', 'latest',
       'current', 'weather', 'मौसम', 'match', 'score', 'cricket', 'election', 'चुनाव',
       'price', 'rate', 'भाव', 'stock', 'शेयर', 'gold', 'सोना', 'चांदी', 'trending',
-      'world', 'today', 'now', 'real time', 'realtime', 'हाल ही में', 'अभी', 'घटना'
+      'world', 'today', 'now', 'real time', 'realtime', 'हाल ही में', 'अभी', 'घटना',
+      'इंटरनेट', 'खोजो', 'सर्च', 'search', 'source', 'वेब', 'website', 'वेबसाइट', 'online', 'ऑनलाइन'
     ];
     const isAutoRealTimeQuery = realTimeTriggers.some((kw) => latestUserMessage.includes(kw));
 
@@ -720,27 +721,28 @@ You must rigidly observe user voice and text playback control commands:
     if (isReasoner) {
       // Reasoner Mode: Deep analytical thinking with rock-solid fallback hierarchy
       modelCandidates = [
-        { modelName: 'gemini-3.6-flash', useThinking: true, useSearch: isSearch },
-        { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: isSearch },
-        { modelName: 'gemini-flash-latest', useThinking: false, useSearch: isSearch },
-        { modelName: 'gemini-3.7-flash', useThinking: true, useSearch: isSearch },
+        { modelName: 'gemini-3.8-flash', useThinking: true, useSearch: isSearch },
+        { modelName: 'gemini-3.1-pro-preview', useThinking: false, useSearch: isSearch },
+        { modelName: 'gemini-3.8-flash', useThinking: false, useSearch: false },
+        { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: false },
+        { modelName: 'gemini-flash-latest', useThinking: false, useSearch: false },
       ];
     } else if (isSearch) {
       // Live Search Mode: Rapid search grounding with seamless non-search fallback
       modelCandidates = [
-        { modelName: 'gemini-3.6-flash', useThinking: false, useSearch: true },
-        { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: true },
-        { modelName: 'gemini-3.6-flash', useThinking: false, useSearch: false },
+        { modelName: 'gemini-3.8-flash', useThinking: false, useSearch: true },
+        { modelName: 'gemini-3.8-flash', useThinking: false, useSearch: false },
+        { modelName: 'gemini-3.1-pro-preview', useThinking: false, useSearch: false },
         { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: false },
         { modelName: 'gemini-flash-latest', useThinking: false, useSearch: false },
       ];
     } else {
       // Turbo / High-Speed Mode: Lightning-fast instant response (<200ms) with zero-downtime resilience
       modelCandidates = [
-        { modelName: 'gemini-3.6-flash', useThinking: false, useSearch: false },
+        { modelName: 'gemini-3.8-flash', useThinking: false, useSearch: false },
         { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: false },
         { modelName: 'gemini-flash-latest', useThinking: false, useSearch: false },
-        { modelName: 'gemini-3.7-flash', useThinking: false, useSearch: false },
+        { modelName: 'gemini-3.1-pro-preview', useThinking: false, useSearch: false },
       ];
     }
 
@@ -764,11 +766,6 @@ You must rigidly observe user voice and text playback control commands:
         if (candidate.useThinking) {
           config.thinkingConfig = {
             thinkingLevel: thinkingEffort === 'LOW' ? ThinkingLevel.LOW : ThinkingLevel.HIGH,
-          };
-        } else if (candidate.modelName === 'gemini-3.7-flash') {
-          // Explicitly turn off reasoning delay for instant token streaming
-          config.thinkingConfig = {
-            thinkingBudget: 0,
           };
         }
 
