@@ -1,0 +1,38 @@
+[
+  {
+    "id": "conv_1789641932800_l8k96q",
+    "userId": "usr_1789641932782_ivqsfn",
+    "title": "mujhe ek successful startup ka",
+    "model": "samrat-turbo",
+    "createdAt": 1789641932800,
+    "updatedAt": 1789641932824,
+    "archived": false,
+    "isPinned": false,
+    "deletedAt": null,
+    "metadata": {}
+  },
+  {
+    "id": "conv_1789641911263_tyh4xc",
+    "userId": "usr_1789641911248_mdcsxi",
+    "title": "Renamed Namaste Chat",
+    "model": "samrat-turbo",
+    "createdAt": 1789641911263,
+    "updatedAt": 1789641911285,
+    "archived": false,
+    "isPinned": true,
+    "deletedAt": null,
+    "metadata": {}
+  },
+  {
+    "id": "conv_1789641908508_g08wss",
+    "userId": "usr_1789641908491_z7vsjb",
+    "title": "HK Samrat Architecture Test",
+    "model": "samrat-turbo",
+    "createdAt": 1789641908508,
+    "updatedAt": 1789641908508,
+    "archived": false,
+    "isPinned": false,
+    "deletedAt": null,
+    "metadata": {}
+  }
+]

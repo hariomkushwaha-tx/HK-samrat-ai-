@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Menu,
+  MessageSquarePlus,
   Zap,
   BrainCircuit,
   Globe,
@@ -29,6 +30,7 @@ export const Header: React.FC = () => {
     setSettingsOpen,
     setImagineOpen,
     currentSession,
+    createNewSession,
     activeCanvasArtifact,
     openCanvas,
     closeCanvas,
@@ -137,14 +139,24 @@ export const Header: React.FC = () => {
       {/* Left section: Sidebar toggle & Model Picker */}
       <div className="flex items-center gap-2 md:gap-3">
         {!isSidebarOpen && (
-          <button
-            id="header-sidebar-toggle-btn"
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg text-[#888] hover:text-white hover:bg-[#1A1A1A] border border-[#262626] transition-colors"
-            title="Open Sidebar"
-          >
-            <Menu className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              id="header-sidebar-toggle-btn"
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-lg text-[#888] hover:text-white hover:bg-[#1A1A1A] border border-[#262626] transition-colors cursor-pointer"
+              title="Open Sidebar"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+            <button
+              id="header-new-chat-quick-btn"
+              onClick={() => createNewSession()}
+              className="p-2 rounded-lg text-[#888] hover:text-white hover:bg-[#1A1A1A] border border-[#262626] transition-colors cursor-pointer"
+              title="New Chat (⌘K)"
+            >
+              <MessageSquarePlus className="w-4 h-4" />
+            </button>
+          </div>
         )}
 
         {/* Model Switcher Dropdown */}

@@ -22,6 +22,7 @@ import {
   Palette,
   Play,
   Music,
+  Plus,
 } from 'lucide-react';
 import { useAI } from '../context/AIContext';
 import { AIModelType, AppSettings, VoicePersonaId } from '../types';
@@ -40,11 +41,15 @@ export const SettingsModal: React.FC = () => {
     settings,
     updateSettings,
     sessions,
+    conversationSummaries,
     clearAllSessions,
+    memories,
+    addMemory,
+    removeMemory,
   } = useAI();
 
   const [activeTab, setActiveTab] = useState<
-    'general' | 'intelligence' | 'instructions' | 'voice' | 'data' | 'about'
+    'general' | 'intelligence' | 'instructions' | 'memory' | 'voice' | 'data' | 'about'
   >('general');
 
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -52,6 +57,11 @@ export const SettingsModal: React.FC = () => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [previewingPersonaId, setPreviewingPersonaId] = useState<VoicePersonaId | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // New Memory form inputs
+  const [newMemoryKey, setNewMemoryKey] = useState('');
+  const [newMemoryFact, setNewMemoryFact] = useState('');
+  const [newMemoryCategory, setNewMemoryCategory] = useState('preference');
 
   // Load available speech voices
   useEffect(() => {
@@ -228,6 +238,18 @@ export const SettingsModal: React.FC = () => {
             >
               <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>Custom Instructions</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('memory')}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-mono transition-all text-left whitespace-nowrap ${
+                activeTab === 'memory'
+                  ? 'bg-[#1C1C1C] text-white border border-[#444] shadow-xs'
+                  : 'text-[#888] hover:text-white hover:bg-[#181818]'
+              }`}
+            >
+              <BrainCircuit className="w-3.5 h-3.5 text-pink-400" />
+              <span>AI Memories & Facts</span>
             </button>
 
             <button
@@ -584,6 +606,114 @@ export const SettingsModal: React.FC = () => {
               </div>
             )}
 
+            {/* AI MEMORY TAB - ARCHITECTURALLY SEPARATE FROM CONVERSATION HISTORY */}
+            {activeTab === 'memory' && (
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-semibold text-white">AI Memory & User Facts</h3>
+                    <span className="text-[10px] font-mono text-pink-400 px-2 py-0.5 rounded bg-pink-500/10 border border-pink-500/20">
+                      PERSISTENT CONTEXT
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#888] mb-4">
+                    Persistent preferences and key facts remembered across all conversations. Kept separate from chat logs.
+                  </p>
+
+                  {/* Add New Memory Form */}
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (newMemoryKey.trim() && newMemoryFact.trim()) {
+                        await addMemory(newMemoryKey.trim(), newMemoryFact.trim(), newMemoryCategory);
+                        setNewMemoryKey('');
+                        setNewMemoryFact('');
+                      }
+                    }}
+                    className="p-4 rounded-xl bg-[#141414] border border-[#262626] space-y-3 mb-6"
+                  >
+                    <div className="text-xs font-semibold text-[#DDD]">Add New Fact or Preference</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <input
+                        type="text"
+                        value={newMemoryKey}
+                        onChange={(e) => setNewMemoryKey(e.target.value)}
+                        placeholder="Key (e.g., Name, Tech Stack)"
+                        className="bg-[#1C1C1C] border border-[#333] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#555]"
+                        required
+                      />
+                      <input
+                        type="text"
+                        value={newMemoryFact}
+                        onChange={(e) => setNewMemoryFact(e.target.value)}
+                        placeholder="Fact (e.g., Hariom Kushwaha, React & Python)"
+                        className="bg-[#1C1C1C] border border-[#333] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#555]"
+                        required
+                      />
+                      <select
+                        value={newMemoryCategory}
+                        onChange={(e) => setNewMemoryCategory(e.target.value)}
+                        className="bg-[#1C1C1C] border border-[#333] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#555]"
+                      >
+                        <option value="profile">User Profile</option>
+                        <option value="preference">Response Preference</option>
+                        <option value="project">Active Project</option>
+                        <option value="general">General Knowledge</option>
+                      </select>
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Remember Fact</span>
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* List of Stored Memories */}
+                  <div className="space-y-2">
+                    <div className="text-xs font-mono uppercase tracking-wider text-[#777] px-1">
+                      Stored Memories ({memories.length})
+                    </div>
+
+                    {memories.length === 0 ? (
+                      <div className="text-center py-8 px-4 rounded-xl bg-[#141414] border border-[#222] text-[#666] text-xs">
+                        No persistent facts recorded yet. HK Samrat AI can remember your name, tools, or writing preferences here.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {memories.map((m) => (
+                          <div
+                            key={m.id}
+                            className="flex items-start justify-between p-3 rounded-xl bg-[#141414] border border-[#262626] text-xs group"
+                          >
+                            <div className="min-w-0 flex-1 pr-2">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="font-bold text-white truncate">{m.key}</span>
+                                <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-[#202020] text-[#888] font-mono">
+                                  {m.category || 'fact'}
+                                </span>
+                              </div>
+                              <p className="text-[#AAA] text-[11px] leading-relaxed break-words">{m.fact}</p>
+                            </div>
+                            <button
+                              onClick={() => removeMemory(m.id)}
+                              className="p-1 rounded text-[#555] hover:text-red-400 hover:bg-[#222] transition-colors shrink-0 cursor-pointer"
+                              title="Forget memory"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* VOICE & AUDIO TAB */}
             {activeTab === 'voice' && (
               <div className="space-y-6">
@@ -783,16 +913,18 @@ export const SettingsModal: React.FC = () => {
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
                     <div className="p-3.5 rounded-xl bg-[#141414] border border-[#262626]">
-                      <div className="text-xl font-bold font-serif text-white">{sessions.length}</div>
+                      <div className="text-xl font-bold font-serif text-white">
+                        {conversationSummaries.length || sessions.length}
+                      </div>
                       <div className="text-[10px] text-[#777] font-mono uppercase mt-0.5">Conversations</div>
                     </div>
                     <div className="p-3.5 rounded-xl bg-[#141414] border border-[#262626]">
-                      <div className="text-xl font-bold font-serif text-blue-400">{totalMessagesCount}</div>
-                      <div className="text-[10px] text-[#777] font-mono uppercase mt-0.5">Messages</div>
+                      <div className="text-xl font-bold font-serif text-blue-400">{memories.length}</div>
+                      <div className="text-[10px] text-[#777] font-mono uppercase mt-0.5">AI Memories</div>
                     </div>
                     <div className="p-3.5 rounded-xl bg-[#141414] border border-[#262626]">
-                      <div className="text-xl font-bold font-serif text-emerald-400">100%</div>
-                      <div className="text-[10px] text-[#777] font-mono uppercase mt-0.5">Local Storage</div>
+                      <div className="text-xl font-bold font-serif text-emerald-400">Database</div>
+                      <div className="text-[10px] text-[#777] font-mono uppercase mt-0.5">Atomic Storage</div>
                     </div>
                   </div>
 

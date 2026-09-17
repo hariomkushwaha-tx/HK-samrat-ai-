@@ -33,15 +33,57 @@ export interface ChatMessage {
   };
 }
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  token: string;
+  createdAt: number;
+}
+
+export interface ConversationSummary {
+  id: string;
+  userId?: string;
+  title: string;
+  model: AIModelType;
+  createdAt: number;
+  updatedAt: number;
+  archived: boolean;
+  isPinned: boolean;
+  messageCount: number;
+  lastMessagePreview?: string;
+  tags?: string[];
+  metadata?: Record<string, any>;
+}
+
+export interface ConversationDateGroups {
+  today: ConversationSummary[];
+  yesterday: ConversationSummary[];
+  previous7Days: ConversationSummary[];
+  older: ConversationSummary[];
+}
+
+export interface AIMemoryItem {
+  id: string;
+  key: string;
+  fact: string;
+  category: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface ChatSession {
   id: string;
+  userId?: string;
   title: string;
   createdAt: number;
   updatedAt: number;
   messages: ChatMessage[];
   model: AIModelType;
   isPinned?: boolean;
+  archived?: boolean;
   tags?: string[];
+  metadata?: Record<string, any>;
 }
 
 export interface CustomInstructions {

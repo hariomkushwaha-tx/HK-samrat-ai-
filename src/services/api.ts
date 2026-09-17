@@ -1,5 +1,266 @@
-import { AppSettings, ChatMessage, GroundingSource } from '../types';
+import {
+  AppSettings,
+  ChatMessage,
+  ConversationDateGroups,
+  ConversationSummary,
+  GroundingSource,
+  User,
+  AIMemoryItem,
+} from '../types';
 
+export const AUTH_STORAGE_KEY = 'hk_samrat_user_session_v1';
+
+export function getStoredUser(): User | null {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredUser(user: User): void {
+  try {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+  } catch {}
+}
+
+export function clearStoredUser(): void {
+  try {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {}
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const user = getStoredUser();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (user?.token) {
+    headers['Authorization'] = `Bearer ${user.token}`;
+  }
+  if (user?.id) {
+    headers['X-User-Id'] = user.id;
+  }
+  return headers;
+}
+
+// ---------------- USER AUTH API ----------------
+export async function authenticateSession(profile?: {
+  email?: string;
+  name?: string;
+  token?: string;
+}): Promise<User> {
+  const existing = getStoredUser();
+  const res = await fetch('/api/auth/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: profile?.email || existing?.email || 'hkdeveloperh@gmail.com',
+      name: profile?.name || existing?.name || 'HK Samrat User',
+      token: profile?.token || existing?.token,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to establish user session');
+  }
+
+  const data = await res.json();
+  const user: User = data.user;
+  setStoredUser(user);
+  return user;
+}
+
+// ---------------- CONVERSATIONS API (Requirement 3, 4, 5, 6, 7, 8, 9) ----------------
+export interface ListConversationsResponse {
+  conversations: ConversationSummary[];
+  groups: ConversationDateGroups;
+  total: number;
+}
+
+export async function fetchConversations(options?: {
+  archived?: boolean;
+  search?: string;
+}): Promise<ListConversationsResponse> {
+  const params = new URLSearchParams();
+  if (options?.archived) params.set('archived', 'true');
+  if (options?.search) params.set('q', options.search);
+
+  const res = await fetch(`/api/conversations?${params.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      // Re-authenticate session and retry once
+      await authenticateSession();
+      const retryRes = await fetch(`/api/conversations?${params.toString()}`, {
+        headers: getAuthHeaders(),
+      });
+      if (retryRes.ok) return await retryRes.json();
+    }
+    throw new Error('Could not load conversations history');
+  }
+
+  return await res.json();
+}
+
+export async function fetchConversation(id: string): Promise<{
+  conversation: ConversationSummary;
+  messages: ChatMessage[];
+}> {
+  const res = await fetch(`/api/conversations/${encodeURIComponent(id)}`, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to load conversation details');
+  }
+
+  return await res.json();
+}
+
+export async function createConversation(data: {
+  id?: string;
+  title?: string;
+  model?: string;
+  metadata?: Record<string, any>;
+}): Promise<ConversationSummary> {
+  const res = await fetch('/api/conversations', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to create new conversation');
+  }
+
+  const json = await res.json();
+  return json.conversation;
+}
+
+export async function updateConversation(
+  id: string,
+  updates: Partial<Pick<ConversationSummary, 'title' | 'model' | 'archived' | 'isPinned' | 'metadata'>>
+): Promise<ConversationSummary> {
+  const res = await fetch(`/api/conversations/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(updates),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to update conversation');
+  }
+
+  const json = await res.json();
+  return json.conversation;
+}
+
+export async function deleteConversation(id: string, permanent: boolean = false): Promise<boolean> {
+  const res = await fetch(`/api/conversations/${encodeURIComponent(id)}?permanent=${permanent}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to delete conversation');
+  }
+
+  const json = await res.json();
+  return json.success;
+}
+
+export async function saveConversationMessage(id: string, message: ChatMessage): Promise<void> {
+  await fetch(`/api/conversations/${encodeURIComponent(id)}/messages`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ message }),
+  });
+}
+
+export async function saveConversationMessagesBatch(id: string, messages: ChatMessage[]): Promise<void> {
+  await fetch(`/api/conversations/${encodeURIComponent(id)}/messages`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ messages }),
+  });
+}
+
+export async function generateChatTitle(id: string, text?: string): Promise<ConversationSummary> {
+  const res = await fetch(`/api/conversations/${encodeURIComponent(id)}/title`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ text }),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to generate title');
+  }
+
+  const json = await res.json();
+  return json.conversation;
+}
+
+export async function migrateLegacySessions(sessions: any[]): Promise<number> {
+  try {
+    const res = await fetch('/api/conversations/migrate', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ sessions }),
+    });
+    if (!res.ok) return 0;
+    const json = await res.json();
+    return json.migratedCount || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ---------------- AI MEMORY API (Requirement 15) ----------------
+export async function fetchAIMemories(): Promise<AIMemoryItem[]> {
+  try {
+    const res = await fetch('/api/memories', {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.memories || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveAIMemory(key: string, fact: string, category: string = 'preference'): Promise<AIMemoryItem | null> {
+  try {
+    const res = await fetch('/api/memories', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ key, fact, category }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.memory;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteAIMemory(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/memories/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ---------------- STREAM CHAT ----------------
 export interface StreamChatOptions {
   messages: ChatMessage[];
   model: string;
@@ -37,7 +298,7 @@ export async function streamChat(options: StreamChatOptions): Promise<() => void
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
       signal: controller.signal,
       body: JSON.stringify({

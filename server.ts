@@ -6,6 +6,7 @@ import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import dotenv from 'dotenv';
 import { EdgeTTS } from 'node-edge-tts';
 import * as googleTTS from 'google-tts-api';
+import { db, generateConciseTitle, User } from './server/db';
 
 dotenv.config();
 
@@ -86,6 +87,269 @@ function formatApiError(error: any): string {
 
   return 'HK Samrat AI सर्वर में तकनीकी समस्या आई है। कृपया "Retry Message" पर क्लिक करके पुनः प्रयास करें।';
 }
+
+// ---------------- AUTH & CONVERSATION HELPERS (Requirement 8, 9, 10) ----------------
+function getAuthUser(req: express.Request): User | null {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice(7).trim()
+    : ((req.headers['x-user-token'] || req.headers['x-session-token']) as string);
+  const userId = req.headers['x-user-id'] as string;
+
+  if (token) {
+    const user = db.getUserByToken(token);
+    if (user) return user;
+  }
+  if (userId) {
+    const user = db.getUserById(userId);
+    if (user) return user;
+  }
+  return null;
+}
+
+function requireAuth(req: express.Request, res: express.Response): User | null {
+  const user = getAuthUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Unauthorized: Session token missing or invalid' });
+    return null;
+  }
+  return user;
+}
+
+function groupConversationsByDate(conversations: any[]) {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterdayStart = todayStart - 86400000;
+  const last7DaysStart = todayStart - 7 * 86400000;
+
+  const today: any[] = [];
+  const yesterday: any[] = [];
+  const previous7Days: any[] = [];
+  const older: any[] = [];
+
+  for (const conv of conversations) {
+    const time = conv.updatedAt || conv.createdAt;
+    if (time >= todayStart) {
+      today.push(conv);
+    } else if (time >= yesterdayStart) {
+      yesterday.push(conv);
+    } else if (time >= last7DaysStart) {
+      previous7Days.push(conv);
+    } else {
+      older.push(conv);
+    }
+  }
+
+  return { today, yesterday, previous7Days, older };
+}
+
+// ---------------- AUTH ENDPOINTS ----------------
+app.post('/api/auth/session', (req, res) => {
+  try {
+    const { email, name, token } = req.body || {};
+    const user = db.getOrCreateUser(email, name, token);
+    res.json({ user });
+  } catch (err: any) {
+    console.error('Session error:', err);
+    res.status(500).json({ error: 'Failed to create user session' });
+  }
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+  const convs = db.listConversations(user.id);
+  res.json({ user, totalConversations: convs.length });
+});
+
+// ---------------- CHAT CONVERSATIONS ENDPOINTS (Requirement 3, 4, 5, 6, 7, 8, 9) ----------------
+
+// 1. List user conversations with date grouping (Today, Yesterday, Previous 7 Days, Older)
+app.get('/api/conversations', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const includeArchived = req.query.archived === 'true';
+  const searchQuery = (req.query.q as string) || '';
+
+  const conversations = db.listConversations(user.id, {
+    includeArchived,
+    searchQuery,
+  });
+
+  const groups = groupConversationsByDate(conversations);
+
+  res.json({
+    conversations,
+    groups,
+    total: conversations.length,
+  });
+});
+
+// 2. Create a new conversation
+app.post('/api/conversations', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  try {
+    const { id, title, model, metadata } = req.body || {};
+    const conv = db.createConversation(user.id, { id, title, model, metadata });
+    res.status(201).json({ conversation: conv });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to create conversation' });
+  }
+});
+
+// 3. Get single conversation and all its messages (Requires user ownership - Requirement 9)
+app.get('/api/conversations/:id', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const convId = req.params.id;
+  const conv = db.getConversation(user.id, convId);
+
+  if (!conv) {
+    return res.status(404).json({ error: 'Conversation not found or access denied' });
+  }
+
+  const messages = db.listMessages(user.id, convId);
+  res.json({
+    conversation: conv,
+    messages,
+  });
+});
+
+// 4. Update conversation (title, isPinned, archived, model)
+app.patch('/api/conversations/:id', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const convId = req.params.id;
+  const updated = db.updateConversation(user.id, convId, req.body);
+
+  if (!updated) {
+    return res.status(404).json({ error: 'Conversation not found or access denied' });
+  }
+
+  res.json({ conversation: updated });
+});
+
+// 5. Delete conversation (Requirement 5)
+app.delete('/api/conversations/:id', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const convId = req.params.id;
+  const permanent = req.query.permanent === 'true';
+  const success = db.deleteConversation(user.id, convId, permanent);
+
+  if (!success) {
+    return res.status(404).json({ error: 'Conversation not found or access denied' });
+  }
+
+  res.json({ success: true, id: convId });
+});
+
+// 6. Save a message or batch of messages to a conversation (Requirement 8 & 11)
+app.post('/api/conversations/:id/messages', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const convId = req.params.id;
+  const payload = req.body || {};
+
+  if (Array.isArray(payload.messages)) {
+    db.saveMessagesBatch(user.id, convId, payload.messages);
+    return res.json({ success: true, count: payload.messages.length });
+  }
+
+  const msgToSave = payload.message || (payload.content ? payload : null);
+  if (msgToSave) {
+    const saved = db.saveMessage(user.id, { ...msgToSave, conversationId: convId });
+    return res.json({ success: true, message: saved });
+  }
+
+  res.status(400).json({ error: 'Invalid message payload' });
+});
+
+// 7. Auto-generate or set clean short title (Requirement 12)
+app.post('/api/conversations/:id/title', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const convId = req.params.id;
+  const { text } = req.body || {};
+
+  const conv = db.getConversation(user.id, convId);
+  if (!conv) {
+    return res.status(404).json({ error: 'Conversation not found' });
+  }
+
+  const newTitle = text ? generateConciseTitle(text) : conv.title;
+  const updated = db.updateConversation(user.id, convId, { title: newTitle });
+  res.json({ conversation: updated });
+});
+
+// 8. Migration endpoint for legacy localStorage sessions (Requirement 18)
+app.post('/api/conversations/migrate', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+
+  const { sessions } = req.body || {};
+  if (!Array.isArray(sessions) || sessions.length === 0) {
+    return res.json({ success: true, migratedCount: 0 });
+  }
+
+  let count = 0;
+  for (const session of sessions) {
+    if (!session.id) continue;
+    try {
+      db.createConversation(user.id, {
+        id: session.id,
+        title: session.title || 'Migrated Chat',
+        model: session.model || 'samrat-turbo',
+      });
+      if (Array.isArray(session.messages) && session.messages.length > 0) {
+        db.saveMessagesBatch(user.id, session.id, session.messages);
+      }
+      count++;
+    } catch (e) {
+      // If already exists, just update messages
+      if (Array.isArray(session.messages)) {
+        db.saveMessagesBatch(user.id, session.id, session.messages);
+        count++;
+      }
+    }
+  }
+
+  res.json({ success: true, migratedCount: count });
+});
+
+// ---------------- AI MEMORIES (Requirement 15: Separate from Chat History) ----------------
+app.get('/api/memories', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+  const memories = db.listMemories(user.id);
+  res.json({ memories });
+});
+
+app.post('/api/memories', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+  const { key, fact, category } = req.body || {};
+  if (!key || !fact) {
+    return res.status(400).json({ error: 'Key and fact are required' });
+  }
+  const mem = db.saveMemory(user.id, key, fact, category);
+  res.json({ memory: mem });
+});
+
+app.delete('/api/memories/:id', (req, res) => {
+  const user = requireAuth(req, res);
+  if (!user) return;
+  const success = db.deleteMemory(user.id, req.params.id);
+  res.json({ success });
+});
 
 // Prompt enhancement endpoint
 app.post('/api/enhance-prompt', async (req, res) => {
