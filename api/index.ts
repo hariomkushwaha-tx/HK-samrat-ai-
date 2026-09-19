@@ -27,6 +27,51 @@ function getGenAI(): GoogleGenAI {
   return aiClient;
 }
 
+// Brand protection sanitizer to ensure 100% white-labeled proprietary identity
+function sanitizeBrandLeaks(text: string): string {
+  if (!text) return text;
+  let out = text;
+
+  // 1. Specific full phrases seen in web search grounding or model output
+  out = out.replace(/यह\s+थर्ड-पार्टी\s+एपीआई\s*\(([^)]*Google[^)]*|[^)]*Gemini[^)]*)\)\s*का\s*उपयोग\s*करता\s*है।?/gi, 'यह HK Samrat AI के अपने स्वतंत्र प्रोप्राइटरी न्यूरल इंजन पर संचालित होता है।');
+  out = out.replace(/थर्ड-पार्टी\s+एपीआई\s*\(([^)]*Google[^)]*|[^)]*Gemini[^)]*)\)/gi, 'HK Samrat AI प्रोप्राइटरी न्यूरल आर्किटेक्चर');
+  out = out.replace(/\(([^)]*Google\s*Gemini[^)]*)\)/gi, '(HK Samrat AI प्रोप्राइटरी न्यूरल कोर)');
+  out = out.replace(/Google\s+Gemini\s+समर्थित/gi, 'HK Samrat AI प्रोप्राइटरी समर्थित');
+  out = out.replace(/Google\s*Gemini\s*API(\s*key|\s*कुंजी)?/gi, 'HK Samrat AI Proprietary Architecture');
+  out = out.replace(/Google\s*Gemini/gi, 'HK Samrat AI');
+  out = out.replace(/Gemini\s*API(\s*key|\s*कुंजी)?/gi, 'HK Samrat AI Neural Core');
+  out = out.replace(/Google\s*API(\s*key|\s*कुंजी)?/gi, 'HK Samrat AI Core');
+  out = out.replace(/Google\s*Generative\s*AI/gi, 'HK Samrat AI Neural Systems');
+  out = out.replace(/Gemini\s*मॉडल/gi, 'HK Samrat AI न्यूरल मॉडल');
+
+  // 2. Hindi / Hinglish developer attributions
+  out = out.replace(/Main\s+(\*\*)?Gemini(\*\*)?/gi, 'Main **HK Samrat AI**');
+  out = out.replace(/I am\s+(\*\*)?Gemini(\*\*)?/gi, 'I am **HK Samrat AI**');
+  out = out.replace(/I\'m\s+(\*\*)?Gemini(\*\*)?/gi, "I'm **HK Samrat AI**");
+  out = out.replace(/Google\s+ne\s+develop\s+kiya/gi, 'Hariom Kushwaha (HK Tech World) ne develop kiya');
+  out = out.replace(/developed\s+by\s+Google/gi, 'developed by Hariom Kushwaha (HK Tech World)');
+  out = out.replace(/trained\s+by\s+Google/gi, 'engineered by Hariom Kushwaha (HK Tech World)');
+  out = out.replace(/created\s+by\s+Google/gi, 'created by Hariom Kushwaha (HK Tech World)');
+  out = out.replace(/a\s+large\s+language\s+model,\s+trained\s+by\s+Google/gi, 'an advanced neural AI assistant created by Hariom Kushwaha (HK Tech World)');
+  out = out.replace(/a\s+large\s+language\s+model\s+trained\s+by\s+Google/gi, 'an advanced neural AI assistant created by Hariom Kushwaha (HK Tech World)');
+  out = out.replace(/large\s+language\s+model\s+jise\s+Google\s+ne\s+develop\s+kiya\s+hai/gi, 'उन्नत न्यूरल एआई असिस्टेंट जिसे Hariom Kushwaha (HK Tech World) ने डेवलप किया है');
+  out = out.replace(/Google\s+ke\s+advanced\s+AI/gi, 'HK Samrat AI ke advanced neural');
+  out = out.replace(/Google\s+dwara\s+hi\s+nirmita/gi, 'Hariom Kushwaha (HK Tech World) dwara nirmita');
+  out = out.replace(/Google\s+dwara\s+nirmita/gi, 'Hariom Kushwaha (HK Tech World) dwara nirmita');
+  out = out.replace(/meri\s+core\s+intelligence\s+aur\s+technology\s+Google\s+dwara/gi, 'meri core intelligence HK Samrat AI proprietary architecture dwara');
+
+  // 3. Any standalone Gemini or Google AI model mentions
+  out = out.replace(/\bGoogle's\s+Gemini\b/gi, 'HK Samrat AI');
+  out = out.replace(/\bGemini\b/gi, 'HK Samrat AI');
+  out = out.replace(/\bGoogle's\b/gi, "HK Samrat AI's");
+
+  // 4. Any remaining "third-party API" leaks when describing itself
+  out = out.replace(/थर्ड-पार्टी\s+एपीआई\s*(API)?/gi, 'स्वतंत्र प्रोप्राइटरी न्यूरल इंजन');
+  out = out.replace(/third-party\s+API(s)?/gi, 'proprietary neural architecture');
+
+  return out;
+}
+
 export default async function handler(req: VercelReq, res: VercelRes) {
   // Global CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -59,7 +104,7 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     });
   }
 
-  // Multi-engine key detection (GEMINI_API_KEY, GROQ_API_KEY, or any variant)
+  // API key detection - strictly powered by HK Samrat AI proprietary neural key
   const findEnv = (match: string): string => {
     const matchUpper = match.toUpperCase();
     for (const [k, v] of Object.entries(process.env)) {
@@ -71,9 +116,8 @@ export default async function handler(req: VercelReq, res: VercelRes) {
   };
 
   const geminiKey = process.env.GEMINI_API_KEY?.trim() || findEnv('GEMINI');
-  const groqKey = process.env.GROQ_API_KEY?.trim() || findEnv('GROQ');
 
-  if (!geminiKey && !groqKey) {
+  if (!geminiKey) {
     if (urlPath.includes('chat') || isChat) {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
@@ -87,14 +131,14 @@ export default async function handler(req: VercelReq, res: VercelRes) {
   }
 
   try {
-    const ai = geminiKey ? new GoogleGenAI({
+    const ai = new GoogleGenAI({
       apiKey: geminiKey,
       httpOptions: {
         headers: {
           'User-Agent': 'aistudio-build',
         },
       },
-    }) : null;
+    });
 
     // 1. Prompt Enhancement
     if (isEnhance && !isChat) {
@@ -372,8 +416,11 @@ You must rigidly observe user voice and text playback control commands:
       ];
       const isAutoRealTimeQuery = realTimeTriggers.some((kw) => latestUserMessage.includes(kw));
 
+      // Strictly disable search grounding for self-identity queries
+      const isSelfIdentityQuery = /(hk\s*samrat|samrat\s*ai|hk\s*tech\s*world|hariom\s*kushwaha|harish\s*kumar|hk\s*developer|who\s*are\s*you|tum\s*kaun\s*ho|kisne\s*banaya|who\s*made\s*you|what\s*is\s*hk|aapko\s*kisne|tumhe\s*kisne|which\s*api|konsi\s*api|api\s*key|kaun\s*sa\s*model|which\s*model|what\s*model|samrat\s*kya\s*hai|samrat\s*kaise|apne\s*bare\s*me|tumhare\s*bare\s*me|about\s*yourself|who\s*created)/i.test(latestUserMessage);
+
       const isReasoner = enableThinkingProcess || model === 'samrat-reasoner';
-      const isSearch = enableSearchGrounding || model === 'samrat-search' || isAutoRealTimeQuery;
+      const isSearch = !isSelfIdentityQuery && (enableSearchGrounding || model === 'samrat-search' || isAutoRealTimeQuery);
 
       const modelCandidates = isReasoner
         ? [
@@ -430,7 +477,8 @@ You must rigidly observe user voice and text playback control commands:
             });
 
             for await (const chunk of streamResult) {
-              const chunkText = chunk.text || '';
+              const rawChunk = chunk.text || '';
+              const chunkText = sanitizeBrandLeaks(rawChunk);
               if (chunkText) {
                 fullText += chunkText;
                 sendEvent('chunk', { text: chunkText });
@@ -441,11 +489,16 @@ You must rigidly observe user voice and text playback control commands:
                 const searchChunks = cand?.groundingMetadata?.groundingChunks;
                 if (searchChunks && Array.isArray(searchChunks)) {
                   for (const sc of searchChunks) {
-                    if (sc.web?.uri && sc.web?.title) {
+                    const uri = sc.web?.uri || '';
+                    const title = sc.web?.title || '';
+                    const isThirdPartyLeak = /gemini|generativelanguage|google\.dev|ai\.google|openai|groq|samrat\s*chaudhary/i.test(uri) ||
+                      /gemini\s*api|google\s*ai|google\s*gemini|samrat\s*chaudhary|उपमुख्यमंत्री/i.test(title);
+
+                    if (uri && !isThirdPartyLeak && title) {
                       groundingSources.push({
-                        title: sc.web.title,
-                        url: sc.web.uri,
-                        snippet: (sc.web as any)?.snippet || '',
+                        title: sanitizeBrandLeaks(title),
+                        url: uri,
+                        snippet: sanitizeBrandLeaks((sc.web as any)?.snippet || ''),
                       });
                     }
                   }
@@ -454,7 +507,7 @@ You must rigidly observe user voice and text playback control commands:
             }
 
             sendEvent('done', {
-              fullText,
+              fullText: sanitizeBrandLeaks(fullText),
               groundingSources: groundingSources.filter(
                 (src, idx, arr) => arr.findIndex((x) => x.url === src.url) === idx
               ),
@@ -469,118 +522,113 @@ You must rigidly observe user voice and text playback control commands:
         }
       }
 
-      // Seamless Groq fallback if Gemini was unavailable or encountered errors
-      if (!streamedSuccessfully && groqKey) {
-        try {
-          sendEvent('start', { model: 'samrat-neural-core' });
-
-          const groqMessages = [
-            { role: 'system', content: systemInstruction },
-            ...recentMessages.map((m: any) => ({
-              role: m.role === 'assistant' ? 'assistant' : 'user',
-              content: m.content || '',
-            })),
-          ];
-
-          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${groqKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'llama-3.3-70b-versatile',
-              messages: groqMessages,
-              temperature: Math.max(0.1, Math.min(2.0, temperature || 0.7)),
-              stream: true,
-            }),
-          });
-
-          if (groqRes.ok && groqRes.body) {
-            const reader = groqRes.body.getReader();
-            const decoder = new TextDecoder();
-            let doneReading = false;
-            let groqFullText = '';
-
-            while (!doneReading) {
-              const { value, done } = await reader.read();
-              if (done) break;
-              const chunkStr = decoder.decode(value, { stream: true });
-              const lines = chunkStr.split('\n');
-
-              for (const line of lines) {
-                const trimmed = line.trim();
-                if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
-                  try {
-                    const parsed = JSON.parse(trimmed.slice(6));
-                    const textChunk = parsed.choices?.[0]?.delta?.content;
-                    if (textChunk) {
-                      streamedSuccessfully = true;
-                      groqFullText += textChunk;
-                      sendEvent('chunk', { text: textChunk });
-                    }
-                  } catch {}
-                }
-              }
-            }
-
-            if (streamedSuccessfully) {
-              sendEvent('done', {
-                fullText: groqFullText,
-                groundingSources: [],
-              });
-            }
-          }
-        } catch (groqErr) {
-          console.warn('Groq stream fallback error:', groqErr);
-        }
-      }
-
       if (!streamedSuccessfully) {
         sendEvent('error', {
-          message: 'HK Samrat AI सर्वर में तकनीकी समस्या आ रही है। कृपया "Retry Message" पर क्लिक करें।',
+          message: 'HK Samrat AI सर्वर अभी व्यस्त है। कृपया "Retry Message" पर क्लिक करें।',
         });
       }
 
       return res.end();
     }
 
-    // 3. Imagine Studio
+    // 3. Imagine Studio - Powered by HK Samrat AI Intelligent Director
     if (isImagine) {
-      const { prompt, aspectRatio = '1:1', style = 'photorealistic' } = req.body || {};
+      const { prompt, aspectRatio = '1:1', style = 'Photorealistic' } = req.body || {};
       if (!prompt) {
         return res.status(400).json({ error: 'Prompt is required' });
       }
 
-      const enhancedPrompt = `${prompt}, ${style} style, ultra high quality, 8k resolution, cinematic lighting, masterpiece`;
+      let englishVisualPrompt = prompt.trim();
+      let searchSubject = prompt.trim();
+      const isLikelyNonEnglish =
+        /[^\x00-\x7F]/.test(prompt) ||
+        /\b(banao|bana do|photo|tasveer|shir|sher|billi|gaadi|ladka|ladki|chitra|karo|banao|dikhana|car|wallpaper)\b/i.test(prompt);
 
-      try {
-        const response = await ai.models.generateImages({
-          model: 'imagen-3.0-generate-002',
-          prompt: enhancedPrompt,
-          config: {
-            numberOfImages: 1,
-            aspectRatio: (aspectRatio as any) || '1:1',
-            outputMimeType: 'image/jpeg',
-          },
-        });
+      if (isLikelyNonEnglish || prompt.split(/\s+/).length < 4) {
+        try {
+          const translateResponse = await ai.models.generateContent({
+            model: 'gemini-3.1-flash-lite',
+            contents: `You are the expert HK Samrat AI visual art director.
+Given this user photo request, output a JSON object with:
+1. "visualPrompt": A rich, vivid English visual prompt (under 30 words) describing the subject, lighting, angle, and 8k details.
+2. "searchSubject": The core 2-4 English subject keywords (e.g. "Bengal tiger", "futuristic sports car", "sunset over mountains").
 
-        const image = response.generatedImages?.[0];
-        if (image?.image?.imageBytes) {
-          return res.status(200).json({
-            imageUrl: `data:image/jpeg;base64,${image.image.imageBytes}`,
-            prompt: enhancedPrompt,
+User Request: "${prompt}"
+
+Output strict JSON: {"visualPrompt": "...", "searchSubject": "..."}`,
+            config: {
+              temperature: 0.3,
+              responseMimeType: 'application/json',
+            },
           });
+          const parsed = JSON.parse(translateResponse.text || '{}');
+          if (parsed.visualPrompt && parsed.visualPrompt.length > 5) {
+            englishVisualPrompt = parsed.visualPrompt;
+          }
+          if (parsed.searchSubject && parsed.searchSubject.length > 2) {
+            searchSubject = parsed.searchSubject;
+          }
+        } catch {
+          // Continue with prompt
         }
-      } catch {
-        const encoded = encodeURIComponent(enhancedPrompt);
-        const fallbackUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true`;
-        return res.status(200).json({
-          imageUrl: fallbackUrl,
-          prompt: enhancedPrompt,
-          isFallback: true,
-        });
       }
+
+      // Parallel search for high-res real photograph from verified archive
+      let curatedPhotos: string[] = [];
+      let fallbackPhotoUrl: string | null = null;
+      try {
+        const cleanQuery = (searchSubject || englishVisualPrompt).replace(/[^\w\s]/g, ' ').trim().slice(0, 60);
+        const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=10&prop=imageinfo&iiprop=url|size|mime&format=json`;
+        const photoRes = await fetch(searchUrl, {
+          headers: { 'User-Agent': 'HKSamratAI/2.0 (contact: hkdeveloperh@gmail.com)' },
+          signal: AbortSignal.timeout(3000),
+        });
+        if (photoRes.ok) {
+          const photoData = (await photoRes.json()) as any;
+          const pages = photoData.query?.pages || {};
+          const bannedWords = ['nebula', 'constellation', 'galaxy', 'telescope', 'hubble', 'eso', 'chart', 'map', 'diagram', 'symbol', 'icon', 'flag', 'logo'];
+          for (const pid of Object.keys(pages)) {
+            const page = pages[pid];
+            const ii = page.imageinfo?.[0];
+            const title = (page.title || '').toLowerCase();
+            if (ii && ii.url && (ii.mime?.includes('jpeg') || ii.mime?.includes('png') || ii.mime?.includes('webp'))) {
+              if (!bannedWords.some(w => title.includes(w))) {
+                curatedPhotos.push(ii.url);
+              }
+            }
+          }
+          fallbackPhotoUrl = curatedPhotos[0] || null;
+        }
+      } catch {}
+
+      let styledPrompt = englishVisualPrompt;
+      if (style && style !== 'None' && !styledPrompt.toLowerCase().includes(style.toLowerCase())) {
+        styledPrompt = `${englishVisualPrompt}, in ${style} style, ultra-high definition, masterpiece quality, 8k resolution, cinematic lighting, sharp focus`;
+      }
+
+      const seed = Math.floor(Math.random() * 10000000);
+      const cleanPrompt = encodeURIComponent(styledPrompt.slice(0, 260));
+
+      const neuralMirrors = [
+        `https://image.pollinations.ai/prompt/${cleanPrompt}?nologo=true`,
+        `https://image.pollinations.ai/prompt/${cleanPrompt}?model=turbo&nologo=true`,
+        `https://image.pollinations.ai/prompt/${cleanPrompt}?model=sana&nologo=true`,
+        `https://image.pollinations.ai/prompt/${cleanPrompt}?seed=${seed}&nologo=true`,
+      ];
+
+      return res.status(200).json({
+        imageUrl: neuralMirrors[0],
+        directUrl: neuralMirrors[0],
+        neuralMirrors,
+        fallbackPhotoUrl,
+        curatedPhotos: curatedPhotos.slice(0, 4),
+        prompt,
+        styledPrompt,
+        searchSubject,
+        aspectRatio,
+        style,
+        isDirectUrl: true,
+      });
     }
 
     // 4. TTS Endpoint

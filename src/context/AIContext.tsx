@@ -36,6 +36,7 @@ import {
   chimeSynthesizer,
   VOICE_PERSONAS,
 } from '../utils/voiceEngine';
+import { sanitizeBrandLeaks } from '../utils/sanitizeBrand';
 
 const DEFAULT_INSTRUCTIONS: CustomInstructions = {
   enabled: false,
@@ -780,13 +781,14 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         });
       },
       onDone: (fullText: string, sources: GroundingSource[]) => {
+        const sanitizedText = sanitizeBrandLeaks(fullText);
         const duration = Date.now() - startTime;
-        const artifact = detectCodeArtifact(fullText);
+        const artifact = detectCodeArtifact(sanitizedText);
 
         const finalAssistantMsg: ChatMessage = {
           id: assistantMessageId,
           role: 'assistant',
-          content: fullText,
+          content: sanitizedText,
           timestamp: Date.now(),
           isStreaming: false,
           groundingSources: sources,

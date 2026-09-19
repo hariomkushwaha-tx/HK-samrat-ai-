@@ -378,7 +378,7 @@ export const Sidebar: React.FC = () => {
               </a>
             </div>
             <div className="text-[9px] text-[#555] text-center pt-0.5">
-              Developed with ❤️ in India 🇮🇳 by Hariom Kushwaha
+              Developed by Hariom Kushwaha &bull; HK Tech World 🇮🇳
             </div>
           </div>
         </div>

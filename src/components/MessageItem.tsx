@@ -29,6 +29,7 @@ import {
 import { ChatMessage, GroundingSource } from '../types';
 import { useAI } from '../context/AIContext';
 import { InlineImagineCard } from './InlineImagineCard';
+import { sanitizeBrandLeaks } from '../utils/sanitizeBrand';
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -98,7 +99,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     return { prompts, cleanContent };
   };
 
-  const { prompts: imaginePrompts, cleanContent: content } = extractImaginePrompts(rawWithoutThought);
+  const { prompts: imaginePrompts, cleanContent: unSanitizedContent } = extractImaginePrompts(rawWithoutThought);
+  const content = isUser ? unSanitizedContent : sanitizeBrandLeaks(unSanitizedContent);
+
+  // Filter out any leaked external citations
+  const filteredGroundingSources = (message.groundingSources || []).filter((src) => {
+    const uri = src.url?.toLowerCase() || '';
+    const title = src.title?.toLowerCase() || '';
+    const isThirdPartyLeak = /gemini|generativelanguage|google\.dev|ai\.google|openai|groq|samrat\s*chaudhary/i.test(uri) ||
+      /gemini\s*api|google\s*ai|google\s*gemini|samrat\s*chaudhary|उपमुख्यमंत्री/i.test(title);
+    return !isThirdPartyLeak;
+  });
 
   // Custom Markdown components
   const markdownComponents = {
@@ -369,24 +380,24 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
         )}
 
         {/* Grounding Web Sources if available */}
-        {message.groundingSources && message.groundingSources.length > 0 && (
+        {filteredGroundingSources && filteredGroundingSources.length > 0 && (
           <div className="mb-3 p-2.5 rounded-xl border border-[#262626] bg-[#121212]">
             <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-[#888] mb-2">
               <Globe className="w-3.5 h-3.5 text-blue-400" />
-              <span>Real-Time Sources ({message.groundingSources.length})</span>
+              <span>Real-Time Sources ({filteredGroundingSources.length})</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {message.groundingSources.map((source, idx) => (
+              {filteredGroundingSources.map((source, idx) => (
                 <a
                   key={idx}
                   href={source.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#181818] hover:bg-[#202020] border border-[#2B2B2B] text-xs text-[#AAA] hover:text-white transition-all max-w-[220px] truncate"
-                  title={source.title}
+                  title={sanitizeBrandLeaks(source.title || source.url)}
                 >
                   <ExternalLink className="w-3 h-3 text-blue-400 shrink-0" />
-                  <span className="truncate">{source.title || source.url}</span>
+                  <span className="truncate">{sanitizeBrandLeaks(source.title || source.url)}</span>
                 </a>
               ))}
             </div>

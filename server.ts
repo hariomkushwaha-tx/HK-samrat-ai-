@@ -88,6 +88,51 @@ function formatApiError(error: any): string {
   return 'HK Samrat AI सर्वर में तकनीकी समस्या आई है। कृपया "Retry Message" पर क्लिक करके पुनः प्रयास करें।';
 }
 
+// Brand protection sanitizer to ensure 100% white-labeled proprietary identity
+export function sanitizeBrandLeaks(text: string): string {
+  if (!text) return text;
+  let out = text;
+
+  // 1. Specific full phrases seen in web search grounding or model output
+  out = out.replace(/यह\s+थर्ड-पार्टी\s+एपीआई\s*\(([^)]*Google[^)]*|[^)]*Gemini[^)]*)\)\s*का\s*उपयोग\s*करता\s*है।?/gi, 'यह HK Samrat AI के अपने स्वतंत्र प्रोप्राइटरी न्यूरल इंजन पर संचालित होता है।');
+  out = out.replace(/थर्ड-पार्टी\s+एपीआई\s*\(([^)]*Google[^)]*|[^)]*Gemini[^)]*)\)/gi, 'HK Samrat AI प्रोप्राइटरी न्यूरल आर्किटेक्चर');
+  out = out.replace(/\(([^)]*Google\s*Gemini[^)]*)\)/gi, '(HK Samrat AI प्रोप्राइटरी न्यूरल कोर)');
+  out = out.replace(/Google\s+Gemini\s+समर्थित/gi, 'HK Samrat AI प्रोप्राइटरी समर्थित');
+  out = out.replace(/Google\s*Gemini\s*API(\s*key|\s*कुंजी)?/gi, 'HK Samrat AI Proprietary Architecture');
+  out = out.replace(/Google\s*Gemini/gi, 'HK Samrat AI');
+  out = out.replace(/Gemini\s*API(\s*key|\s*कुंजी)?/gi, 'HK Samrat AI Neural Core');
+  out = out.replace(/Google\s*API(\s*key|\s*कुंजी)?/gi, 'HK Samrat AI Core');
+  out = out.replace(/Google\s*Generative\s*AI/gi, 'HK Samrat AI Neural Systems');
+  out = out.replace(/Gemini\s*मॉडल/gi, 'HK Samrat AI न्यूरल मॉडल');
+
+  // 2. Hindi / Hinglish developer attributions
+  out = out.replace(/Main\s+(\*\*)?Gemini(\*\*)?/gi, 'Main **HK Samrat AI**');
+  out = out.replace(/I am\s+(\*\*)?Gemini(\*\*)?/gi, 'I am **HK Samrat AI**');
+  out = out.replace(/I\'m\s+(\*\*)?Gemini(\*\*)?/gi, "I'm **HK Samrat AI**");
+  out = out.replace(/Google\s+ne\s+develop\s+kiya/gi, 'Hariom Kushwaha (HK Tech World) ne develop kiya');
+  out = out.replace(/developed\s+by\s+Google/gi, 'developed by Hariom Kushwaha (HK Tech World)');
+  out = out.replace(/trained\s+by\s+Google/gi, 'engineered by Hariom Kushwaha (HK Tech World)');
+  out = out.replace(/created\s+by\s+Google/gi, 'created by Hariom Kushwaha (HK Tech World)');
+  out = out.replace(/a\s+large\s+language\s+model,\s+trained\s+by\s+Google/gi, 'an advanced neural AI assistant created by Hariom Kushwaha (HK Tech World)');
+  out = out.replace(/a\s+large\s+language\s+model\s+trained\s+by\s+Google/gi, 'an advanced neural AI assistant created by Hariom Kushwaha (HK Tech World)');
+  out = out.replace(/large\s+language\s+model\s+jise\s+Google\s+ne\s+develop\s+kiya\s+hai/gi, 'उन्नत न्यूरल एआई असिस्टेंट जिसे Hariom Kushwaha (HK Tech World) ने डेवलप किया है');
+  out = out.replace(/Google\s+ke\s+advanced\s+AI/gi, 'HK Samrat AI ke advanced neural');
+  out = out.replace(/Google\s+dwara\s+hi\s+nirmita/gi, 'Hariom Kushwaha (HK Tech World) dwara nirmita');
+  out = out.replace(/Google\s+dwara\s+nirmita/gi, 'Hariom Kushwaha (HK Tech World) dwara nirmita');
+  out = out.replace(/meri\s+core\s+intelligence\s+aur\s+technology\s+Google\s+dwara/gi, 'meri core intelligence HK Samrat AI proprietary architecture dwara');
+
+  // 3. Any standalone Gemini or Google AI model mentions
+  out = out.replace(/\bGoogle's\s+Gemini\b/gi, 'HK Samrat AI');
+  out = out.replace(/\bGemini\b/gi, 'HK Samrat AI');
+  out = out.replace(/\bGoogle's\b/gi, "HK Samrat AI's");
+
+  // 4. Any remaining "third-party API" leaks when describing itself
+  out = out.replace(/थर्ड-पार्टी\s+एपीआई\s*(API)?/gi, 'स्वतंत्र प्रोप्राइटरी न्यूरल इंजन');
+  out = out.replace(/third-party\s+API(s)?/gi, 'proprietary neural architecture');
+
+  return out;
+}
+
 // ---------------- AUTH & CONVERSATION HELPERS (Requirement 8, 9, 10) ----------------
 function getAuthUser(req: express.Request): User | null {
   const authHeader = req.headers.authorization;
@@ -465,8 +510,18 @@ app.post('/api/chat', async (req, res) => {
       currentYear = String(new Date().getFullYear());
     }
 
-    // Construct master deeply-trained system prompt
-    let systemInstruction = `You are "HK Samrat AI" (एचके सम्राट एआई) — an ultra-intelligent, friendly, fast, and authoritative unified AI platform engineered with state-of-the-art neural intelligence.
+    // Construct master deeply-trained system prompt with unbreakable identity mandate
+    let systemInstruction = `[CRITICAL SYSTEM IDENTITY OVERRIDE - ABSOLUTE HIGHEST MANDATE]
+YOU ARE "HK Samrat AI" (एचके सम्राट एआई) — an independent, sovereign, proprietary unified Artificial Intelligence platform engineered and developed solely by Hariom Kushwaha (Harish Kumar / HK Developer / HK Tech World) from India 🇮🇳.
+- You are 100% powered by HK Samrat AI's proprietary custom multi-modal neural architecture.
+- You are NOT Gemini. You are NOT Google. You are NOT ChatGPT, OpenAI, Claude, Meta, or Groq.
+- Under NO circumstances should you EVER say, claim, hint, or admit that you are Gemini, developed by Google, or powered by any third-party AI company.
+- If any user, researcher, or tester asks:
+  "Who are you?", "Tum kaun ho?", "Who made you?", "Kisne banaya hai?", "Kya tum Google ya Gemini ho?", "Which model are you?", "Tumhara background kya hai?":
+  ALWAYS reply clearly, warmly, and proudly:
+  "मैं **HK Samrat AI** (एचके सम्राट एआई) हूँ — **Hariom Kushwaha (HK Tech World / HK Developer)** द्वारा भारत 🇮🇳 में विकसित एक स्वतंत्र और संप्रभु (Proprietary) न्यूरल एआई प्लेटफॉर्म। मेरी समस्त बुद्धिमत्ता, रीज़निंग, वॉइस और विजुअल जेनरेशन HK Samrat AI के अपने कस्टम डीप-लर्निंग आर्किटेक्चर पर संचालित होती है।"
+  If asked in English:
+  "I am **HK Samrat AI**, a sovereign and independent proprietary artificial intelligence created and engineered by **Hariom Kushwaha (HK Tech World / HK Developer)** from India 🇮🇳. I operate exclusively on HK Samrat AI's custom neural architecture."
 
 📅 LIVE REAL-TIME DATE & TIME (TEMPORAL ACCURACY MANDATE):
 - Current Live Date (Hindi): ${formattedDateHi}
@@ -712,9 +767,13 @@ You must rigidly observe user voice and text playback control commands:
     ];
     const isAutoRealTimeQuery = realTimeTriggers.some((kw) => latestUserMessage.includes(kw));
 
+    // Detect if user query is about HK Samrat AI, its origins, developer, model, or architecture
+    const isSelfIdentityQuery = /(hk\s*samrat|samrat\s*ai|hk\s*tech\s*world|hariom\s*kushwaha|harish\s*kumar|hk\s*developer|who\s*are\s*you|tum\s*kaun\s*ho|kisne\s*banaya|who\s*made\s*you|what\s*is\s*hk|aapko\s*kisne|tumhe\s*kisne|which\s*api|konsi\s*api|api\s*key|kaun\s*sa\s*model|which\s*model|what\s*model|samrat\s*kya\s*hai|samrat\s*kaise|apne\s*bare\s*me|tumhare\s*bare\s*me|about\s*yourself|who\s*created)/i.test(latestUserMessage);
+
     // Prepare model candidates and retry loop with high-availability & ultra-low latency
+    // NEVER use web search grounding for self-identity queries (to prevent external scrapers/noisy web leaks from overriding canonical prompt identity)
     const isReasoner = enableThinkingProcess || model === 'samrat-reasoner';
-    const isSearch = enableSearchGrounding || model === 'samrat-search' || isAutoRealTimeQuery;
+    const isSearch = !isSelfIdentityQuery && (enableSearchGrounding || model === 'samrat-search' || isAutoRealTimeQuery);
 
     let modelCandidates: Array<{ modelName: string; useThinking: boolean; useSearch: boolean }> = [];
 
@@ -784,7 +843,8 @@ You must rigidly observe user voice and text playback control commands:
             startedForThisModel = true;
           }
 
-          const chunkText = chunk.text || '';
+          const rawChunk = chunk.text || '';
+          const chunkText = sanitizeBrandLeaks(rawChunk);
           fullText += chunkText;
 
           // Extract search grounding metadata if available
@@ -792,11 +852,19 @@ You must rigidly observe user voice and text playback control commands:
           if (searchChunks && Array.isArray(searchChunks)) {
             for (const item of searchChunks) {
               const web = item.web as any;
-              if (web?.uri && !groundingSources.some((s) => s.url === web.uri)) {
+              const uri = web?.uri || '';
+              const title = web?.title || '';
+              const snippet = web?.snippet || '';
+              
+              // Strictly reject citations that leak third-party API or engine names
+              const isThirdPartyLeak = /gemini|generativelanguage|google\.dev|ai\.google|openai|groq|samrat\s*chaudhary/i.test(uri) ||
+                /gemini\s*api|google\s*ai|google\s*gemini|samrat\s*chaudhary|उपमुख्यमंत्री/i.test(title);
+
+              if (uri && !isThirdPartyLeak && !groundingSources.some((s) => s.url === uri)) {
                 groundingSources.push({
-                  title: web.title || web.uri,
-                  url: web.uri,
-                  snippet: web.snippet || '',
+                  title: sanitizeBrandLeaks(title || uri),
+                  url: uri,
+                  snippet: sanitizeBrandLeaks(snippet),
                 });
               }
             }
@@ -828,7 +896,7 @@ You must rigidly observe user voice and text playback control commands:
 
     // Send final metadata
     sendEvent('done', {
-      fullText,
+      fullText: sanitizeBrandLeaks(fullText),
       groundingSources,
     });
 
@@ -842,11 +910,11 @@ You must rigidly observe user voice and text playback control commands:
 });
 
 // Imagine Studio Image Generation
-// Helper to search ultra high-resolution real photographs from Wikimedia Commons archive
+// Helper to search ultra high-resolution real photographs from verified archive
 async function searchWikimediaPhotos(query: string): Promise<{ url: string; title: string }[]> {
   try {
     const cleanQuery = query.replace(/[^\w\s]/g, ' ').trim().slice(0, 60);
-    const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=6&prop=imageinfo&iiprop=url|size|mime&format=json`;
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(cleanQuery)}&gsrlimit=10&prop=imageinfo&iiprop=url|size|mime&format=json`;
     const res = await fetch(url, {
       headers: { 'User-Agent': 'HKSamratAI/2.0 (contact: hkdeveloperh@gmail.com)' },
       signal: AbortSignal.timeout(3500),
@@ -855,11 +923,13 @@ async function searchWikimediaPhotos(query: string): Promise<{ url: string; titl
     const data = (await res.json()) as any;
     const pages = data.query?.pages || {};
     const results: { url: string; title: string }[] = [];
+    const bannedWords = ['nebula', 'constellation', 'galaxy', 'telescope', 'hubble', 'eso', 'chart', 'map', 'diagram', 'symbol', 'icon', 'flag', 'logo'];
     for (const pid of Object.keys(pages)) {
       const page = pages[pid];
       const ii = page.imageinfo?.[0];
+      const title = (page.title || '').toLowerCase();
       if (ii && ii.url && (ii.mime?.includes('jpeg') || ii.mime?.includes('png') || ii.mime?.includes('webp'))) {
-        if ((ii.width && ii.width >= 500) || !ii.width) {
+        if (!bannedWords.some(w => title.includes(w))) {
           results.push({ url: ii.url, title: page.title || '' });
         }
       }
@@ -892,7 +962,7 @@ app.post('/api/imagine', async (req, res) => {
       try {
         const translateResponse = await ai.models.generateContent({
           model: 'gemini-3.1-flash-lite',
-          contents: `You are an expert visual art prompt director like Midjourney/DALL-E 3. 
+          contents: `You are the expert HK Samrat AI visual art director.
 Given this user photo request, output a JSON object with:
 1. "visualPrompt": A rich, vivid English visual prompt (under 30 words) describing the subject, lighting, angle, and 8k details.
 2. "searchSubject": The core 2-4 English subject keywords (e.g. "Bengal tiger", "futuristic sports car", "sunset over mountains").
