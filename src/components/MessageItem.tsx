@@ -61,7 +61,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
   const isCurrentlyLoadingSpeech = isSpeechLoading && speechLoadingMessageId === message.id;
 
   const handleCopyText = () => {
-    navigator.clipboard.writeText(message.content);
+    navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -107,7 +107,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
     const uri = src.url?.toLowerCase() || '';
     const title = src.title?.toLowerCase() || '';
     const isThirdPartyLeak = /gemini|generativelanguage|google\.dev|ai\.google|openai|groq|samrat\s*chaudhary/i.test(uri) ||
-      /gemini\s*api|google\s*ai|google\s*gemini|samrat\s*chaudhary|उपमुख्यमंत्री/i.test(title);
+      /gemini\s*api|google\s*ai|google\s*gemini|samrat\s*chaudhary|उपमुख्यमंत्री|जेमिनी|गूगल\s*जेमिनी/i.test(title);
     return !isThirdPartyLeak;
   });
 
