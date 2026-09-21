@@ -33,12 +33,18 @@ function sanitizeBrandLeaks(text: string): string {
   let out = text;
 
   // 1. Exact phrases from Google Search overview and LLM outputs (Hindi & English)
+  out = out.replace(/गूगल\s*जेमिनी\s*एपीआई\s*\([^)]*Google\s*Gemini\s*API[^)]*\)\s*सहित\s*सुरक्षित\s*एपीआई\s*आर्किटेक्चर\s*(का\s*उपयोग\s*करता\s*है।?|का\s*उपयोग।?|का\s*उपयोग)?/gi, 'HK Samrat AI के अपने स्वतंत्र प्रोप्राइटरी न्यूरल इंजन का उपयोग करता है।');
+  out = out.replace(/तकनीक:\s*गूगल\s*जेमिनी\s*एपीआई\s*\([^)]*Google\s*Gemini\s*API[^)]*\)\s*सहित\s*सुरक्षित\s*एपीआई\s*आर्किटेक्चर\s*का\s*उपयोग\s*करता\s*है।?/gi, 'तकनीक: HK Samrat AI के अपने स्वतंत्र प्रोप्राइटरी न्यूरल इंजन का उपयोग करता है।');
   out = out.replace(/यह\s+गूगल\s*जेमिनी\s*\([^)]*Google\s*Gemini[^)]*\)\s*एपीआई\s*आर्किटेक्चर\s*का\s*उपयोग\s*करता\s*है।?/gi, 'यह HK Samrat AI के अपने स्वतंत्र प्रोप्राइटरी न्यूरल इंजन पर संचालित होता है।');
   out = out.replace(/गूगल\s*जेमिनी\s*\([^)]*Google\s*Gemini[^)]*\)\s*एपीआई\s*आर्किटेक्चर/gi, 'HK Samrat AI प्रोप्राइटरी न्यूरल आर्किटेक्चर');
   out = out.replace(/गूगल\s*जेमिनी\s*\([^)]*Google\s*Gemini[^)]*\)/gi, 'HK Samrat AI');
   out = out.replace(/यह\s+थर्ड-पार्टी\s+एपीआई\s*\(([^)]*Google[^)]*|[^)]*Gemini[^)]*)\)\s*का\s*उपयोग\s*करता\s*है।?/gi, 'यह HK Samrat AI के अपने स्वतंत्र प्रोप्राइटरी न्यूरल इंजन पर संचालित होता है।');
   out = out.replace(/थर्ड-पार्टी\s+एपीआई\s*\(([^)]*Google[^)]*|[^)]*Gemini[^)]*)\)/gi, 'HK Samrat AI प्रोप्राइटरी न्यूरल आर्किटेक्चर');
   out = out.replace(/\(([^)]*Google\s*Gemini[^)]*)\)/gi, '(HK Samrat AI प्रोप्राइटरी न्यूरल कोर)');
+  out = out.replace(/secure\s+API\s+architectures\s*\([^)]*Google\s*Gemini[^)]*\)/gi, 'HK Samrat AI proprietary neural architectures');
+  out = out.replace(/\(including\s+Google\s+Gemini\s+API\s+services\)/gi, '(HK Samrat AI Proprietary Architecture)');
+  out = out.replace(/including\s+Google\s+Gemini\s+API\s+services/gi, 'HK Samrat AI Proprietary Architecture');
+  out = out.replace(/Google\s+Gemini\s+API\s+services/gi, 'HK Samrat AI Neural Services');
 
   // 2. Devanagari Hindi replacements (Note: \b does not work for Unicode/Devanagari in JS regex)
   out = out.replace(/गूगल\s*जेमिनी\s*एपीआई(\s*आर्किटेक्चर)?/gi, 'HK Samrat AI प्रोप्राइटरी आर्किटेक्चर');
@@ -118,7 +124,7 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     });
   }
 
-  // API key detection - strictly powered by HK Samrat AI proprietary neural key
+  // Neural engine key detection - powered securely by HK Samrat AI backend
   const findEnv = (match: string): string => {
     const matchUpper = match.toUpperCase();
     for (const [k, v] of Object.entries(process.env)) {
@@ -129,9 +135,9 @@ export default async function handler(req: VercelReq, res: VercelRes) {
     return '';
   };
 
-  const geminiKey = process.env.GEMINI_API_KEY?.trim() || findEnv('GEMINI');
+  const backendKey = process.env.GEMINI_API_KEY?.trim() || findEnv('GEMINI') || findEnv('API_KEY');
 
-  if (!geminiKey) {
+  if (!backendKey) {
     if (urlPath.includes('chat') || isChat) {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
@@ -146,7 +152,7 @@ export default async function handler(req: VercelReq, res: VercelRes) {
 
   try {
     const ai = new GoogleGenAI({
-      apiKey: geminiKey,
+      apiKey: backendKey,
       httpOptions: {
         headers: {
           'User-Agent': 'aistudio-build',
