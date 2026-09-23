@@ -317,12 +317,16 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     let isMounted = true;
 
     async function initApp() {
+      // 1. Establish/verify user session (safe, resilient fallback)
       try {
-        // 1. Establish/verify user session
         const user = await authenticateSession();
         if (isMounted) setCurrentUser(user);
+      } catch (authErr) {
+        console.warn('Auth session notice:', authErr);
+      }
 
-        // 2. Silent legacy migration (Requirement 14)
+      // 2. Silent legacy migration (safe)
+      try {
         const migrationDone = localStorage.getItem(MIGRATION_DONE_KEY);
         if (!migrationDone) {
           const rawStored = localStorage.getItem(STORAGE_KEY_SESSIONS);
@@ -336,19 +340,29 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           }
           localStorage.setItem(MIGRATION_DONE_KEY, 'true');
         }
+      } catch (migErr) {
+        console.warn('Legacy migration notice:', migErr);
+      }
 
-        // 3. Load conversations metadata for sidebar
+      // 3. Load conversations metadata for sidebar
+      try {
         const convData = await fetchConversations({ archived: false });
         if (isMounted) {
           setConversationSummaries(convData.conversations || []);
-          setConversationGroups(convData.groups || { today: [], yesterday: [], previous7Days: [], older: [] });
+          setConversationGroups(
+            convData.groups || { today: [], yesterday: [], previous7Days: [], older: [] }
+          );
         }
+      } catch (convErr) {
+        console.warn('Sidebar conversations notice:', convErr);
+      }
 
-        // 4. Load AI memories (Requirement 15)
+      // 4. Load AI memories
+      try {
         const memData = await fetchAIMemories();
         if (isMounted) setMemories(memData);
-      } catch (err) {
-        console.error('App initialization error:', err);
+      } catch (memErr) {
+        console.warn('AI memories notice:', memErr);
       }
     }
 

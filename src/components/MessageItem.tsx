@@ -30,6 +30,7 @@ import { ChatMessage, GroundingSource } from '../types';
 import { useAI } from '../context/AIContext';
 import { InlineImagineCard } from './InlineImagineCard';
 import { sanitizeBrandLeaks } from '../utils/sanitizeBrand';
+import { HKLogo } from './HKLogo';
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -316,7 +317,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           )}
 
           {/* User Message Bubble */}
-          <div className="px-4 py-3 rounded-2xl rounded-tr-xs bg-[#1A1A1A] border border-[#333] text-[#F5F5F5] text-sm shadow-sm leading-relaxed">
+          <div className="px-4 py-3 rounded-2xl rounded-tr-xs bg-[#171720] border border-white/[0.1] text-[#F3F4F6] text-sm shadow-sm leading-relaxed">
             <p className="whitespace-pre-wrap select-text">{message.content}</p>
           </div>
         </div>
@@ -326,20 +327,18 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
 
   // Assistant Message
   return (
-    <div className="flex gap-3 my-4 px-2 md:px-0 group font-sans">
-      {/* AI Avatar */}
+    <div className="flex gap-3.5 my-5 px-2 md:px-0 group font-sans">
+      {/* AI Sovereign Emblem Avatar */}
       <div className="shrink-0 mt-0.5">
-        <div className="w-8 h-8 rounded-xl bg-[#141414] border border-[#262626] flex items-center justify-center shadow-xs">
-          <span className="font-serif italic font-bold text-xs text-white">HK</span>
-        </div>
+        <HKLogo size={32} />
       </div>
 
       {/* Content Body */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-xs font-serif font-bold text-white tracking-wide">HK Samrat AI</span>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs font-bold text-white tracking-wide">HK Samrat AI</span>
           {message.modelUsed && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#141414] text-[#888] font-mono border border-[#262626] uppercase">
+            <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 font-mono border border-amber-500/20 uppercase font-semibold">
               {message.modelUsed === 'samrat-reasoner'
                 ? 'Reason'
                 : message.modelUsed === 'samrat-search'
@@ -348,7 +347,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
             </span>
           )}
           {message.thinkingDurationMs && (
-            <span className="text-[10px] text-[#555] font-mono">
+            <span className="text-[10px] text-neutral-500 font-mono">
               {(message.thinkingDurationMs / 1000).toFixed(1)}s
             </span>
           )}

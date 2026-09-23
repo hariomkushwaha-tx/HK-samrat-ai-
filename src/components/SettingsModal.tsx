@@ -33,6 +33,7 @@ import {
   chimeSynthesizer,
   VoicePersona,
 } from '../utils/voiceEngine';
+import { HKLogo } from './HKLogo';
 
 export const SettingsModal: React.FC = () => {
   const {
@@ -992,30 +993,33 @@ export const SettingsModal: React.FC = () => {
             {/* ABOUT TAB */}
             {activeTab === 'about' && (
               <div className="space-y-5">
-                <div className="p-4 rounded-xl bg-[#141414] border border-[#262626]">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-xl bg-[#1C1C1C] border border-[#333] flex items-center justify-center text-white font-serif italic font-bold text-lg">
-                      HK
-                    </div>
+                <div className="p-5 rounded-2xl bg-[#121218] border border-white/[0.08] shadow-sm">
+                  <div className="flex items-center gap-3.5 mb-3">
+                    <HKLogo size={46} />
                     <div>
-                      <h4 className="text-sm font-serif italic font-bold text-white">HK Samrat AI (Version 3.0 Pro)</h4>
-                      <p className="text-[11px] text-blue-400 font-mono">Next-Generation Unified Neural Intelligence</p>
+                      <h4 className="text-base font-bold text-white flex items-center gap-2">
+                        HK Samrat AI
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          v3.5 PRO
+                        </span>
+                      </h4>
+                      <p className="text-xs text-neutral-400 font-mono mt-0.5">Sovereign Multimodal Neural Architecture</p>
                     </div>
                   </div>
-                  <p className="text-xs text-[#888] leading-relaxed mt-2 font-sans">
-                    HK Samrat AI is built by <span className="text-white font-semibold">HK Tech World</span>. Custom-engineered to deliver ultra-fast streaming speed, deep analytical reasoning, live real-time web grounding, and an interactive multimodal code canvas.
+                  <p className="text-xs text-neutral-300 leading-relaxed font-sans">
+                    HK Samrat AI is independently engineered by <span className="text-white font-semibold">HK Tech World</span>. Built from the ground up to deliver lightning-fast response streaming, deep analytical multi-step reasoning, real-time web intelligence, and an interactive multimodal code canvas.
                   </p>
-                  <div className="mt-3 pt-3 border-t border-[#222] flex flex-col gap-1.5">
-                    <p className="text-xs text-[#AAA]">
-                      Created with ❤️ in India 🇮🇳 by <span className="text-white font-semibold">Hariom Kushwaha</span> (HK Tech World)
+                  <div className="mt-4 pt-3 border-t border-white/[0.08] flex flex-col gap-2">
+                    <p className="text-xs text-neutral-400">
+                      Created with dedication in India 🇮🇳 by <span className="text-white font-semibold">Hariom Kushwaha</span> (Founder, HK Tech World)
                     </p>
-                    <div className="flex items-center justify-between text-[11px] pt-1">
-                      <span className="font-mono text-blue-400/90">HK Tech World &bull; Version 3.0 Pro</span>
+                    <div className="flex items-center justify-between text-[11px] pt-1 font-mono">
+                      <span className="text-amber-400/90 font-semibold">HK Tech World &bull; Sovereign Release 3.5</span>
                       <a
                         href="/privacy.html"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300 underline font-mono text-xs"
+                        className="text-amber-400 hover:text-amber-300 underline text-xs"
                       >
                         Privacy Policy &amp; Terms &rarr;
                       </a>

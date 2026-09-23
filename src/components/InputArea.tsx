@@ -11,7 +11,6 @@ import {
   Globe,
   BrainCircuit,
   Zap,
-  HelpCircle,
 } from 'lucide-react';
 import { useAI } from '../context/AIContext';
 import { MessageAttachment } from '../types';
@@ -203,30 +202,30 @@ export const InputArea: React.FC = () => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative rounded-xl bg-[#121212] border transition-all shadow-sm ${
+        className={`relative rounded-2xl md:rounded-3xl glass-dock transition-all duration-200 ${
           isDragOver
-            ? 'border-blue-400 bg-[#181818]'
-            : 'border-[#262626] focus-within:border-[#444]'
+            ? 'border-amber-400/60 bg-[#16161E]'
+            : 'border-white/[0.1] focus-within:border-amber-500/30'
         }`}
       >
         {/* Attachment Previews */}
         {attachments.length > 0 && (
-          <div className="p-2.5 flex flex-wrap gap-2 border-b border-[#262626]">
+          <div className="p-3 flex flex-wrap gap-2 border-b border-white/[0.08]">
             {attachments.map((att) => (
               <div
                 key={att.id}
-                className="relative group rounded-lg overflow-hidden border border-[#333] bg-[#161616] max-w-[120px] shadow-xs"
+                className="relative group rounded-xl overflow-hidden border border-white/[0.1] bg-[#121217] max-w-[120px] shadow-sm"
               >
                 {att.mimeType.startsWith('image/') ? (
                   <img src={att.data} alt={att.name} className="h-16 w-full object-cover" />
                 ) : (
-                  <div className="h-16 p-2 flex items-center justify-center text-[10px] text-[#888] text-center font-mono">
+                  <div className="h-16 p-2 flex items-center justify-center text-[10px] text-neutral-400 text-center font-mono">
                     {att.name}
                   </div>
                 )}
                 <button
                   onClick={() => handleRemoveAttachment(att.id)}
-                  className="absolute top-1 right-1 p-0.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition-colors"
+                  className="absolute top-1 right-1 p-0.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition-colors cursor-pointer"
                   title="Remove attachment"
                 >
                   <X className="w-3 h-3" />
@@ -237,7 +236,7 @@ export const InputArea: React.FC = () => {
         )}
 
         {/* Text Input */}
-        <div className="p-3.5">
+        <div className="px-4 pt-3.5 pb-2">
           <textarea
             id="chat-input-textarea"
             ref={textareaRef}
@@ -247,15 +246,15 @@ export const InputArea: React.FC = () => {
             onKeyDown={handleKeyDown}
             placeholder={
               isListening
-                ? 'Listening to speech... Speak now'
+                ? 'Listening to speech... Speak naturally'
                 : 'Message HK Samrat AI... (Hindi, Hinglish, or English)'
             }
-            className="w-full bg-transparent text-sm md:text-base text-[#F5F5F5] placeholder-[#555] focus:outline-none resize-none max-h-48 leading-relaxed font-sans"
+            className="w-full bg-transparent text-sm md:text-base text-[#EDEDED] placeholder-neutral-500 focus:outline-none resize-none max-h-48 leading-relaxed font-sans"
           />
         </div>
 
         {/* Control Toolbar */}
-        <div className="px-3 pb-3 flex items-center justify-between gap-2 select-none">
+        <div className="px-3.5 pb-3 flex items-center justify-between gap-2 select-none">
           {/* Left tools: Upload, Voice, Enhance, Quick toggles */}
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* File Upload Button */}
@@ -270,8 +269,8 @@ export const InputArea: React.FC = () => {
             <button
               id="input-attach-btn"
               onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 rounded-lg text-[#777] hover:text-white hover:bg-[#1A1A1A] border border-transparent hover:border-[#262626] transition-colors"
-              title="Attach Images or Code Files"
+              className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+              title="Attach Images or Files"
             >
               <Paperclip className="w-4 h-4" />
             </button>
@@ -280,10 +279,10 @@ export const InputArea: React.FC = () => {
             <button
               id="input-voice-dictation-btn"
               onClick={toggleVoiceInput}
-              className={`p-1.5 rounded-lg transition-all ${
+              className={`p-2 rounded-xl transition-all cursor-pointer ${
                 isListening
-                  ? 'bg-red-950/60 text-red-400 border border-red-500/50 animate-pulse'
-                  : 'text-[#777] hover:text-white hover:bg-[#1A1A1A] border border-transparent hover:border-[#262626]'
+                  ? 'bg-red-950/70 text-red-400 border border-red-500/50 animate-pulse'
+                  : 'text-neutral-400 hover:text-white hover:bg-white/[0.06]'
               }`}
               title={isListening ? 'Stop Voice Recording' : 'Voice Input (Hindi/English)'}
             >
@@ -295,17 +294,17 @@ export const InputArea: React.FC = () => {
               id="input-enhance-prompt-btn"
               onClick={handleEnhancePrompt}
               disabled={!input.trim() || isEnhancing}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono border transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
                 isEnhancing
-                  ? 'bg-purple-950/60 border-purple-500/50 text-purple-300 animate-pulse'
+                  ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 animate-pulse'
                   : input.trim()
-                  ? 'bg-[#181818] hover:bg-[#222] border-[#2B2B2B] hover:border-[#444] text-[#AAA] hover:text-white'
-                  : 'opacity-30 cursor-not-allowed border-transparent text-[#555]'
+                  ? 'bg-[#181822] hover:bg-[#20202D] border-white/[0.1] text-amber-300 hover:text-amber-200'
+                  : 'opacity-30 cursor-not-allowed border-transparent text-neutral-500'
               }`}
               title="Supercharge prompt with HK Samrat AI Prompt Crafter"
             >
-              <Sparkles className="w-3 h-3 text-purple-400" />
-              <span className="hidden sm:inline text-[10px] uppercase">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden sm:inline text-[11px]">
                 {isEnhancing ? 'Enhancing...' : 'Enhance'}
               </span>
             </button>
@@ -314,43 +313,44 @@ export const InputArea: React.FC = () => {
             <button
               id="input-photo-studio-btn"
               onClick={() => setImagineOpen(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono border border-blue-500/30 bg-blue-950/25 hover:bg-blue-900/40 text-blue-300 hover:text-white transition-all cursor-pointer"
-              title="Open HK Samrat AI Imagine Photo Studio"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border border-pink-500/30 bg-pink-950/30 hover:bg-pink-900/40 text-pink-300 hover:text-white transition-all cursor-pointer"
+              title="Open HK Samrat AI Imagine Art Studio"
             >
-              <ImageIcon className="w-3 h-3 text-blue-400" />
-              <span className="hidden sm:inline text-[10px] uppercase tracking-wider">
-                Photo Studio
+              <ImageIcon className="w-3.5 h-3.5 text-pink-400" />
+              <span className="hidden sm:inline text-[11px]">
+                Imagine
               </span>
             </button>
 
-            {/* Quick Engine Pills */}
+            {/* Search Grounding toggle */}
             <button
               id="quick-pill-search"
               onClick={() =>
                 updateSettings({ enableSearchGrounding: !settings.enableSearchGrounding })
               }
-              className={`hidden md:flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider border transition-all ${
+              className={`hidden md:flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-medium border transition-all cursor-pointer ${
                 settings.enableSearchGrounding || activeModel === 'samrat-search'
-                  ? 'bg-[#1C1C1C] border-blue-500/50 text-blue-400'
-                  : 'bg-[#161616] border-[#262626] text-[#666] hover:text-[#AAA]'
+                  ? 'bg-cyan-950/40 border-cyan-500/50 text-cyan-300'
+                  : 'bg-[#14141A] border-white/[0.08] text-neutral-400 hover:text-neutral-200'
               }`}
             >
-              <Globe className="w-2.5 h-2.5" />
-              <span>Search</span>
+              <Globe className="w-3 h-3 text-cyan-400" />
+              <span>Web</span>
             </button>
 
+            {/* Deep Reasoning toggle */}
             <button
               id="quick-pill-reason"
               onClick={() =>
                 updateSettings({ enableThinkingProcess: !settings.enableThinkingProcess })
               }
-              className={`hidden md:flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider border transition-all ${
+              className={`hidden md:flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-medium border transition-all cursor-pointer ${
                 settings.enableThinkingProcess || activeModel === 'samrat-reasoner'
-                  ? 'bg-[#1C1C1C] border-purple-500/50 text-purple-400'
-                  : 'bg-[#161616] border-[#262626] text-[#666] hover:text-[#AAA]'
+                  ? 'bg-purple-950/40 border-purple-500/50 text-purple-300'
+                  : 'bg-[#14141A] border-white/[0.08] text-neutral-400 hover:text-neutral-200'
               }`}
             >
-              <BrainCircuit className="w-2.5 h-2.5" />
+              <BrainCircuit className="w-3 h-3 text-purple-400" />
               <span>Reason</span>
             </button>
           </div>
@@ -361,20 +361,20 @@ export const InputArea: React.FC = () => {
               <button
                 id="input-stop-generating-btn"
                 onClick={stopGenerating}
-                className="p-2 rounded-lg bg-red-950 text-red-400 border border-red-800 hover:bg-red-900 transition-all shadow-xs"
+                className="p-2.5 rounded-xl bg-red-900/80 text-red-300 border border-red-700/60 hover:bg-red-800 transition-all shadow-xs cursor-pointer"
                 title="Stop Generating"
               >
-                <Square className="w-3.5 h-3.5 fill-red-400" />
+                <Square className="w-4 h-4 fill-red-300" />
               </button>
             ) : (
               <button
                 id="input-send-message-btn"
                 onClick={handleSend}
                 disabled={!input.trim() && attachments.length === 0}
-                className={`p-2 rounded-lg transition-all ${
+                className={`p-2.5 rounded-xl transition-all cursor-pointer ${
                   input.trim() || attachments.length > 0
-                    ? 'bg-white text-black hover:bg-[#E5E5E5] shadow-xs'
-                    : 'bg-[#1A1A1A] text-[#555] cursor-not-allowed border border-[#262626]'
+                    ? 'bg-white text-black hover:bg-neutral-200 shadow-md transform hover:scale-105 active:scale-95'
+                    : 'bg-[#181822] text-neutral-500 cursor-not-allowed border border-white/[0.06]'
                 }`}
                 title="Send Message (Enter)"
               >
@@ -385,8 +385,8 @@ export const InputArea: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center justify-center text-[10px] font-mono text-[#555] mt-1.5 px-1">
-        <span>HK Samrat AI can make mistakes. Verify important facts.</span>
+      <div className="flex items-center justify-center text-[10px] text-neutral-500 mt-2 px-1">
+        <span>HK Samrat AI Neural Core · Engineered by Hariom Kushwaha (HK Tech World)</span>
       </div>
     </div>
   );

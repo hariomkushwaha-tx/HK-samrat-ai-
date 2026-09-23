@@ -14,6 +14,7 @@ import {
 import { useAI } from '../context/AIContext';
 import { GeneratedImage } from '../types';
 import { generateImagineArt, enhancePrompt } from '../services/api';
+import { HKLogo } from './HKLogo';
 
 export const ImagineStudio: React.FC = () => {
   const { isImagineOpen, setImagineOpen } = useAI();
@@ -130,25 +131,26 @@ export const ImagineStudio: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 font-sans">
-      <div className="bg-[#0E0E0E] border border-[#262626] rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden text-[#E5E5E5]">
+      <div className="bg-[#0D0D12] border border-white/[0.1] rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden text-[#E5E5E5]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-[#262626] flex items-center justify-between bg-[#141414]">
+        <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between bg-[#111116]">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#1C1C1C] border border-[#333] flex items-center justify-center shadow-xs">
-              <ImageIcon className="w-4 h-4 text-white" />
-            </div>
+            <HKLogo size={32} />
             <div>
-              <h2 className="text-base font-serif italic font-bold text-white tracking-wide">
+              <h2 className="text-base font-bold text-white tracking-wide flex items-center gap-2">
                 HK Samrat Imagine Studio
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.2 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20">
+                  VISUAL AI
+                </span>
               </h2>
-              <p className="text-[11px] text-[#888]">
-                Multimodal generative visual synthesis with prompt engineering
+              <p className="text-[11px] text-neutral-400">
+                Multimodal generative visual synthesis &amp; high-detail artistic design
               </p>
             </div>
           </div>
           <button
             onClick={() => setImagineOpen(false)}
-            className="p-1.5 rounded-lg text-[#888] hover:text-white hover:bg-[#202020] transition-colors"
+            className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>

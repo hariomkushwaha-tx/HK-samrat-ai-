@@ -52,24 +52,37 @@ export async function authenticateSession(profile?: {
   token?: string;
 }): Promise<User> {
   const existing = getStoredUser();
-  const res = await fetch('/api/auth/session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: profile?.email || existing?.email || 'hkdeveloperh@gmail.com',
-      name: profile?.name || existing?.name || 'HK Samrat User',
-      token: profile?.token || existing?.token,
-    }),
-  });
+  try {
+    const res = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: profile?.email || existing?.email || 'hkdeveloperh@gmail.com',
+        name: profile?.name || existing?.name || 'HK Samrat User',
+        token: profile?.token || existing?.token,
+      }),
+    });
 
-  if (!res.ok) {
-    throw new Error('Failed to establish user session');
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.user) {
+        setStoredUser(data.user);
+        return data.user;
+      }
+    }
+  } catch (err) {
+    console.warn('Server auth session unreachable, using local session fallback:', err);
   }
 
-  const data = await res.json();
-  const user: User = data.user;
-  setStoredUser(user);
-  return user;
+  const fallbackUser: User = existing || {
+    id: 'usr_' + Date.now(),
+    email: profile?.email || 'hkdeveloperh@gmail.com',
+    name: profile?.name || 'HK Samrat User',
+    token: profile?.token || 'tok_' + Math.random().toString(36).substring(2),
+    createdAt: Date.now(),
+  };
+  setStoredUser(fallbackUser);
+  return fallbackUser;
 }
 
 // ---------------- CONVERSATIONS API (Requirement 3, 4, 5, 6, 7, 8, 9) ----------------
@@ -87,11 +100,15 @@ export async function fetchConversations(options?: {
   if (options?.archived) params.set('archived', 'true');
   if (options?.search) params.set('q', options.search);
 
-  const res = await fetch(`/api/conversations?${params.toString()}`, {
-    headers: getAuthHeaders(),
-  });
+  try {
+    const res = await fetch(`/api/conversations?${params.toString()}`, {
+      headers: getAuthHeaders(),
+    });
 
-  if (!res.ok) {
+    if (res.ok) {
+      return await res.json();
+    }
+
     if (res.status === 401) {
       // Re-authenticate session and retry once
       await authenticateSession();
@@ -100,10 +117,15 @@ export async function fetchConversations(options?: {
       });
       if (retryRes.ok) return await retryRes.json();
     }
-    throw new Error('Could not load conversations history');
+  } catch (err) {
+    console.warn('Could not load conversations from server:', err);
   }
 
-  return await res.json();
+  return {
+    conversations: [],
+    groups: { today: [], yesterday: [], previous7Days: [], older: [] },
+    total: 0,
+  };
 }
 
 export async function fetchConversation(id: string): Promise<{

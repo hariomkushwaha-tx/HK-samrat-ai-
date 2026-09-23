@@ -108,10 +108,41 @@ export default async function handler(req: VercelReq, res: VercelRes) {
 
   const urlPath = (req.query?.path as string) || req.url || '';
   const isHealth = urlPath.includes('health');
-  const isChat = urlPath.includes('chat') || req.method === 'POST';
+  const isAuth = urlPath.includes('auth/session');
+  const isConversations = urlPath.includes('conversations');
+  const isMemories = urlPath.includes('memories');
   const isImagine = urlPath.includes('imagine');
   const isTTS = urlPath.includes('tts');
   const isEnhance = urlPath.includes('enhance-prompt');
+  const isChat = urlPath.includes('chat') || (!isHealth && !isAuth && !isConversations && !isMemories && !isImagine && !isTTS && !isEnhance && req.method === 'POST');
+
+  // Auth session handler
+  if (isAuth) {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    const { email, name, token } = body;
+    const user = {
+      id: 'usr_' + Date.now(),
+      email: email || 'hkdeveloperh@gmail.com',
+      name: name || 'HK Samrat User',
+      token: token || 'tok_' + Math.random().toString(36).substring(2),
+      createdAt: Date.now(),
+    };
+    return res.status(200).json({ user });
+  }
+
+  // Conversations list/groups handler
+  if (isConversations) {
+    return res.status(200).json({
+      conversations: [],
+      groups: { today: [], yesterday: [], previous7Days: [], older: [] },
+      total: 0,
+    });
+  }
+
+  // AI Memories handler
+  if (isMemories) {
+    return res.status(200).json({ memories: [] });
+  }
 
   // Health check endpoint
   if (isHealth || (req.method === 'GET' && !urlPath.includes('chat') && !urlPath.includes('imagine') && !urlPath.includes('tts'))) {

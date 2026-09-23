@@ -46,5 +46,13 @@
     "token": "tok_1789641932782_qxr5wy1ez",
     "createdAt": 1789641932782,
     "updatedAt": 1789641932782
+  },
+  {
+    "id": "usr_1790179795242_nzfx9o",
+    "email": "test@example.com",
+    "name": "HK Samrat Explorer",
+    "token": "tok_1790179795242_vvxqur66b",
+    "createdAt": 1790179795242,
+    "updatedAt": 1790179795242
   }
 ]
