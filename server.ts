@@ -30,6 +30,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// Directly serve static assets from public folder (logos, icons, ads.txt, robots.txt, sitemap.xml)
+app.use(express.static(path.join(process.cwd(), 'public'), {
+  maxAge: '1d',
+  etag: true,
+}));
+
 // Internal neural engine client helper
 let aiClient: GoogleGenAI | null = null;
 function getGenAI(): GoogleGenAI {

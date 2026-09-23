@@ -148,82 +148,102 @@ export async function createConversation(data: {
   title?: string;
   model?: string;
   metadata?: Record<string, any>;
-}): Promise<ConversationSummary> {
-  const res = await fetch('/api/conversations', {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data),
-  });
+}): Promise<ConversationSummary | null> {
+  try {
+    const res = await fetch('/api/conversations', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
 
-  if (!res.ok) {
-    throw new Error('Failed to create new conversation');
+    if (res.ok) {
+      const json = await res.json();
+      return json.conversation;
+    }
+  } catch (err) {
+    console.warn('Could not create conversation on server:', err);
   }
-
-  const json = await res.json();
-  return json.conversation;
+  return null;
 }
 
 export async function updateConversation(
   id: string,
   updates: Partial<Pick<ConversationSummary, 'title' | 'model' | 'archived' | 'isPinned' | 'metadata'>>
-): Promise<ConversationSummary> {
-  const res = await fetch(`/api/conversations/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(updates),
-  });
+): Promise<ConversationSummary | null> {
+  try {
+    const res = await fetch(`/api/conversations/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(updates),
+    });
 
-  if (!res.ok) {
-    throw new Error('Failed to update conversation');
+    if (res.ok) {
+      const json = await res.json();
+      return json.conversation;
+    }
+  } catch (err) {
+    console.warn('Could not update conversation on server:', err);
   }
-
-  const json = await res.json();
-  return json.conversation;
+  return null;
 }
 
 export async function deleteConversation(id: string, permanent: boolean = false): Promise<boolean> {
-  const res = await fetch(`/api/conversations/${encodeURIComponent(id)}?permanent=${permanent}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
+  try {
+    const res = await fetch(`/api/conversations/${encodeURIComponent(id)}?permanent=${permanent}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
 
-  if (!res.ok) {
-    throw new Error('Failed to delete conversation');
+    if (res.ok) {
+      const json = await res.json();
+      return json.success ?? true;
+    }
+  } catch (err) {
+    console.warn('Could not delete conversation on server:', err);
   }
-
-  const json = await res.json();
-  return json.success;
+  return false;
 }
 
 export async function saveConversationMessage(id: string, message: ChatMessage): Promise<void> {
-  await fetch(`/api/conversations/${encodeURIComponent(id)}/messages`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ message }),
-  });
+  try {
+    await fetch(`/api/conversations/${encodeURIComponent(id)}/messages`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ message }),
+    });
+  } catch (err) {
+    console.warn('Could not save conversation message to server:', err);
+  }
 }
 
 export async function saveConversationMessagesBatch(id: string, messages: ChatMessage[]): Promise<void> {
-  await fetch(`/api/conversations/${encodeURIComponent(id)}/messages`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ messages }),
-  });
+  try {
+    await fetch(`/api/conversations/${encodeURIComponent(id)}/messages`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ messages }),
+    });
+  } catch (err) {
+    console.warn('Could not save messages batch to server:', err);
+  }
 }
 
-export async function generateChatTitle(id: string, text?: string): Promise<ConversationSummary> {
-  const res = await fetch(`/api/conversations/${encodeURIComponent(id)}/title`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ text }),
-  });
+export async function generateChatTitle(id: string, text?: string): Promise<ConversationSummary | null> {
+  try {
+    const res = await fetch(`/api/conversations/${encodeURIComponent(id)}/title`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ text }),
+    });
 
-  if (!res.ok) {
-    throw new Error('Failed to generate title');
+    if (res.ok) {
+      const json = await res.json();
+      return json.conversation;
+    }
+  } catch (err) {
+    console.warn('Could not generate chat title on server:', err);
   }
-
-  const json = await res.json();
-  return json.conversation;
+  return null;
 }
 
 export async function migrateLegacySessions(sessions: any[]): Promise<number> {
