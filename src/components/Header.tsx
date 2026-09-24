@@ -177,24 +177,32 @@ export const Header: React.FC = () => {
         <button
           id="header-model-selector-btn"
           onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#131318] hover:bg-[#1A1A22] border border-white/[0.08] hover:border-white/[0.16] text-neutral-200 transition-all cursor-pointer shadow-xs"
+          className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#131318] hover:bg-[#1A1A22] border border-white/[0.08] hover:border-white/[0.16] text-neutral-200 transition-all cursor-pointer shadow-xs"
         >
-          <currentModelObj.icon className={`w-3.5 h-3.5 ${currentModelObj.color}`} />
-          <span className="text-xs font-semibold tracking-tight max-w-[130px] sm:max-w-none truncate">
+          <currentModelObj.icon className={`w-3.5 h-3.5 ${currentModelObj.color} shrink-0`} />
+          <span className="text-xs font-semibold tracking-tight max-w-[110px] sm:max-w-none truncate">
             {currentModelObj.name}
           </span>
           <span className="hidden lg:inline-block text-[10px] px-1.5 py-0.2 rounded bg-white/[0.06] text-neutral-400 font-mono">
             {currentModelObj.badge}
           </span>
-          <ChevronDown className="w-3 h-3 text-neutral-500 ml-0.5" />
+          <ChevronDown className="w-3 h-3 text-neutral-500 ml-0.5 shrink-0" />
         </button>
+
+        {/* Mobile backdrop to close on outside click */}
+        {isModelDropdownOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs sm:hidden"
+            onClick={() => setIsModelDropdownOpen(false)}
+          />
+        )}
 
         {/* Executive Model Menu Popover */}
         {isModelDropdownOpen && (
-          <div className="absolute top-full left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 mt-2 w-84 md:w-96 rounded-2xl bg-[#111116] border border-white/[0.1] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
-            <div className="px-3 py-2 text-[10px] font-mono uppercase tracking-widest text-neutral-400 border-b border-white/[0.06] mb-1 flex items-center justify-between">
-              <span>Proprietary Neural Engines</span>
-              <span className="text-amber-400/90 font-bold">HK TECH WORLD</span>
+          <div className="fixed inset-x-2.5 top-16 sm:absolute sm:inset-x-auto sm:top-full sm:left-1/2 sm:-translate-x-1/2 md:left-0 md:translate-x-0 mt-0 sm:mt-2 w-auto sm:w-[360px] md:w-[380px] max-w-[calc(100vw-1.25rem)] rounded-2xl bg-[#111116] border border-white/[0.12] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-100 max-h-[82vh] overflow-y-auto custom-scrollbar">
+            <div className="px-2.5 sm:px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-neutral-400 border-b border-white/[0.06] mb-1.5 flex items-center justify-between gap-2">
+              <span className="truncate">Proprietary Neural Engines</span>
+              <span className="text-amber-400/90 font-bold shrink-0">HK TECH WORLD</span>
             </div>
             <div className="space-y-1">
               {modelsList.map((m) => {
@@ -211,7 +219,7 @@ export const Header: React.FC = () => {
                       }
                       setIsModelDropdownOpen(false);
                     }}
-                    className={`w-full flex items-start gap-3 p-2.5 rounded-xl transition-all text-left cursor-pointer ${
+                    className={`w-full flex items-start gap-2.5 sm:gap-3 p-2 sm:p-2.5 rounded-xl transition-all text-left cursor-pointer ${
                       isSelected
                         ? 'bg-[#1C1C24] text-white border border-white/[0.12] shadow-xs'
                         : 'hover:bg-[#16161D] text-neutral-400 hover:text-neutral-200 border border-transparent'
@@ -220,14 +228,14 @@ export const Header: React.FC = () => {
                     <div className="p-2 rounded-lg bg-[#0C0C10] border border-white/[0.06] mt-0.5 shrink-0">
                       <Icon className={`w-3.5 h-3.5 ${m.color}`} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-neutral-200">{m.name}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0C0C10] text-neutral-400 border border-white/[0.06] font-mono">
+                    <div className="flex-1 min-w-0 pr-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-neutral-200 truncate">{m.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0C0C10] text-neutral-400 border border-white/[0.06] font-mono shrink-0 whitespace-nowrap">
                           {m.badge}
                         </span>
                       </div>
-                      <p className="text-[11px] text-neutral-400 leading-snug mt-0.5">{m.description}</p>
+                      <p className="text-[11px] text-neutral-400 leading-snug mt-0.5 line-clamp-2">{m.description}</p>
                     </div>
                     {isSelected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-1" />}
                   </button>

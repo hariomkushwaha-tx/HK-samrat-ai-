@@ -56,6 +56,24 @@ function getGenAI(): GoogleGenAI {
   return aiClient;
 }
 
+// Model & Search Grounding Circuit Breakers (Zero downtime & Quota Resilience)
+const modelCooldownMap = new Map<string, number>();
+let searchGroundingCooldownUntil = 0;
+
+function isModelInCooldown(modelName: string): boolean {
+  const cd = modelCooldownMap.get(modelName);
+  if (!cd) return false;
+  if (Date.now() > cd) {
+    modelCooldownMap.delete(modelName);
+    return false;
+  }
+  return true;
+}
+
+function markModelCooldown(modelName: string, durationMs: number = 60000) {
+  modelCooldownMap.set(modelName, Date.now() + durationMs);
+}
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({
@@ -447,8 +465,9 @@ app.post('/api/enhance-prompt', async (req, res) => {
     const ai = getGenAI();
     let enhanced = prompt;
 
-    const enhanceModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+    const enhanceModels = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-pro-preview'];
     for (const m of enhanceModels) {
+      if (isModelInCooldown(m)) continue;
       try {
         const response = await ai.models.generateContent({
           model: m,
@@ -463,8 +482,10 @@ User prompt: "${prompt}"`,
           enhanced = response.text.trim();
           break;
         }
-      } catch (e) {
-        console.warn(`Enhance prompt model ${m} attempt failed, trying next candidate`);
+      } catch (e: any) {
+        if (e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED')) {
+          markModelCooldown(m, 60000);
+        }
       }
     }
 
@@ -813,52 +834,59 @@ You must rigidly observe user voice and text playback control commands:
     // Prepare model candidates and retry loop with high-availability & ultra-low latency
     // NEVER use web search grounding for self-identity queries (to prevent external scrapers/noisy web leaks from overriding canonical prompt identity)
     const isReasoner = enableThinkingProcess || model === 'samrat-reasoner';
-    const isSearch = !isSelfIdentityQuery && (enableSearchGrounding || model === 'samrat-search' || isAutoRealTimeQuery);
+    const canUseSearch = !isSelfIdentityQuery && (enableSearchGrounding || model === 'samrat-search' || isAutoRealTimeQuery);
+    const isSearchAllowed = canUseSearch && Date.now() > searchGroundingCooldownUntil;
+
+    // Healthy model hierarchy with priority on currently unthrottled models
+    const activeFlashModels = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-pro-preview'];
+    const sortedModels = [...activeFlashModels].sort((a, b) => {
+      const aCd = isModelInCooldown(a) ? 1 : 0;
+      const bCd = isModelInCooldown(b) ? 1 : 0;
+      return aCd - bCd;
+    });
 
     let modelCandidates: Array<{ modelName: string; useThinking: boolean; useSearch: boolean }> = [];
 
     if (isReasoner) {
-      // Reasoner Mode: Deep analytical thinking with rock-solid fallback hierarchy
-      modelCandidates = [
-        { modelName: 'gemini-3.8-flash', useThinking: true, useSearch: isSearch },
-        { modelName: 'gemini-3.1-pro-preview', useThinking: false, useSearch: isSearch },
-        { modelName: 'gemini-3.8-flash', useThinking: false, useSearch: false },
-        { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: false },
-        { modelName: 'gemini-flash-latest', useThinking: false, useSearch: false },
-      ];
-    } else if (isSearch) {
-      // Live Search Mode: Rapid search grounding with seamless non-search fallback
-      modelCandidates = [
-        { modelName: 'gemini-3.8-flash', useThinking: false, useSearch: true },
-        { modelName: 'gemini-3.8-flash', useThinking: false, useSearch: false },
-        { modelName: 'gemini-3.1-pro-preview', useThinking: false, useSearch: false },
-        { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: false },
-        { modelName: 'gemini-flash-latest', useThinking: false, useSearch: false },
-      ];
+      // Reasoner Mode: Deep analytical thinking on primary, followed by high-speed neural fallbacks
+      modelCandidates.push({ modelName: sortedModels[0], useThinking: true, useSearch: false });
+      for (const m of sortedModels) {
+        modelCandidates.push({ modelName: m, useThinking: false, useSearch: false });
+      }
+    } else if (isSearchAllowed) {
+      // Live Search Mode: Rapid search grounding attempt on primary, followed by pure neural fallbacks
+      modelCandidates.push({ modelName: sortedModels[0], useThinking: false, useSearch: true });
+      for (const m of sortedModels) {
+        modelCandidates.push({ modelName: m, useThinking: false, useSearch: false });
+      }
     } else {
       // Turbo / High-Speed Mode: Lightning-fast instant response (<200ms) with zero-downtime resilience
-      modelCandidates = [
-        { modelName: 'gemini-3.8-flash', useThinking: false, useSearch: false },
-        { modelName: 'gemini-3.1-flash-lite', useThinking: false, useSearch: false },
-        { modelName: 'gemini-flash-latest', useThinking: false, useSearch: false },
-        { modelName: 'gemini-3.1-pro-preview', useThinking: false, useSearch: false },
-      ];
+      for (const m of sortedModels) {
+        modelCandidates.push({ modelName: m, useThinking: false, useSearch: false });
+      }
     }
 
     let streamedSuccessfully = false;
     let lastError: any = null;
     let fullText = '';
     const groundingSources: any[] = [];
+    const failedModelNames = new Set<string>();
 
     for (let attempt = 0; attempt < modelCandidates.length; attempt++) {
       const candidate = modelCandidates[attempt];
+
+      // If this model has already failed quota/availability in this request, skip duplicate attempts
+      if (failedModelNames.has(candidate.modelName) && !candidate.useSearch) {
+        continue;
+      }
+
       try {
         const config: any = {
           systemInstruction,
           temperature: Math.max(0.1, Math.min(2.0, temperature || 0.7)),
         };
 
-        if (candidate.useSearch) {
+        if (candidate.useSearch && Date.now() > searchGroundingCooldownUntil) {
           config.tools = [{ googleSearch: {} }];
         }
 
@@ -878,7 +906,7 @@ You must rigidly observe user voice and text playback control commands:
 
         for await (const chunk of streamResponse) {
           if (!startedForThisModel) {
-            const publicModel = isReasoner ? 'samrat-reasoner-pro' : isSearch ? 'samrat-web-search' : 'samrat-turbo-neural';
+            const publicModel = isReasoner ? 'samrat-reasoner-pro' : canUseSearch ? 'samrat-web-search' : 'samrat-turbo-neural';
             sendEvent('start', { model: publicModel });
             startedForThisModel = true;
           }
@@ -917,13 +945,31 @@ You must rigidly observe user voice and text playback control commands:
         break;
       } catch (err: any) {
         lastError = err;
-        console.warn(`[HK Samrat AI] Candidate ${candidate.modelName} attempt ${attempt + 1} failed:`, err.message || err);
+        const errMsg = err?.message || String(err);
+        const isQuota = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota');
+
+        if (isQuota) {
+          if (candidate.useSearch) {
+            // Google Search tool quota tripped; cooldown search tool for 5 minutes and route to neural engine
+            searchGroundingCooldownUntil = Date.now() + 5 * 60 * 1000;
+            console.warn('[HK Samrat AI] Search grounding tool quota limit reached. Routing seamlessly to neural engine.');
+          } else {
+            markModelCooldown(candidate.modelName, 60000);
+            failedModelNames.add(candidate.modelName);
+            console.warn(`[HK Samrat AI] Model ${candidate.modelName} quota limit reached. Cooldown initiated.`);
+          }
+        } else {
+          console.warn(`[HK Samrat AI] Candidate ${candidate.modelName} attempt ${attempt + 1} fallback:`, errMsg.slice(0, 120));
+          failedModelNames.add(candidate.modelName);
+        }
+
         // If we already sent partial content to client, don't restart with another model mid-stream
         if (fullText.length > 0) {
           break;
         }
-        // Small exponential backoff before trying fallback candidate
-        const backoffMs = Math.min(800, (attempt + 1) * 250);
+
+        // Fast backoff before trying next healthy candidate
+        const backoffMs = Math.min(300, (attempt + 1) * 100);
         await new Promise((resolve) => setTimeout(resolve, backoffMs));
       }
     }
@@ -999,10 +1045,13 @@ app.post('/api/imagine', async (req, res) => {
       );
 
     if (isLikelyNonEnglish || prompt.split(/\s+/).length < 4) {
-      try {
-        const translateResponse = await ai.models.generateContent({
-          model: 'gemini-3.1-flash-lite',
-          contents: `You are the expert HK Samrat AI visual art director.
+      const transModels = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+      for (const tm of transModels) {
+        if (isModelInCooldown(tm)) continue;
+        try {
+          const translateResponse = await ai.models.generateContent({
+            model: tm,
+            contents: `You are the expert HK Samrat AI visual art director.
 Given this user photo request, output a JSON object with:
 1. "visualPrompt": A rich, vivid English visual prompt (under 30 words) describing the subject, lighting, angle, and 8k details.
 2. "searchSubject": The core 2-4 English subject keywords (e.g. "Bengal tiger", "futuristic sports car", "sunset over mountains").
@@ -1010,20 +1059,24 @@ Given this user photo request, output a JSON object with:
 User Request: "${prompt}"
 
 Output strict JSON: {"visualPrompt": "...", "searchSubject": "..."}`,
-          config: {
-            temperature: 0.3,
-            responseMimeType: 'application/json',
-          },
-        });
-        const parsed = JSON.parse(translateResponse.text || '{}');
-        if (parsed.visualPrompt && parsed.visualPrompt.length > 5) {
-          englishVisualPrompt = parsed.visualPrompt;
+            config: {
+              temperature: 0.3,
+              responseMimeType: 'application/json',
+            },
+          });
+          const parsed = JSON.parse(translateResponse.text || '{}');
+          if (parsed.visualPrompt && parsed.visualPrompt.length > 5) {
+            englishVisualPrompt = parsed.visualPrompt;
+          }
+          if (parsed.searchSubject && parsed.searchSubject.length > 2) {
+            searchSubject = parsed.searchSubject;
+          }
+          break;
+        } catch (transErr: any) {
+          if (transErr?.message?.includes('429')) {
+            markModelCooldown(tm, 60000);
+          }
         }
-        if (parsed.searchSubject && parsed.searchSubject.length > 2) {
-          searchSubject = parsed.searchSubject;
-        }
-      } catch (transErr: any) {
-        console.warn('Prompt translation fallback:', transErr.message);
       }
     }
 
