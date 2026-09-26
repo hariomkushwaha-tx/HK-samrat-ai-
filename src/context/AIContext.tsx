@@ -261,6 +261,8 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const savedMessageIdRef = useRef<string | null>(null);
   const savedTextRef = useRef<string>('');
   const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const heartbeatTimerRef = useRef<any>(null);
 
   const currentChunkTextRef = useRef<string>('');
   const currentWordCharOffsetRef = useRef<number>(0);
@@ -984,13 +986,32 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       }
     };
 
+    activeUtteranceRef.current = utterance;
+    (window as any).__activeSpeechUtterance = utterance;
+
     utterance.onstart = () => {
       setIsSpeaking(true);
       setIsSpeechPaused(false);
       setSpeakingMessageId(messageId);
+
+      // Chrome 15s freeze fix: periodic pause/resume heartbeat
+      if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = setInterval(() => {
+        if (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.speaking) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        }
+      }, 9000);
     };
 
     utterance.onend = () => {
+      if (heartbeatTimerRef.current) {
+        clearInterval(heartbeatTimerRef.current);
+        heartbeatTimerRef.current = null;
+      }
+      activeUtteranceRef.current = null;
+      (window as any).__activeSpeechUtterance = null;
+
       if (isSpeechActiveRef.current) {
         setTimeout(() => {
           if (isSpeechActiveRef.current) {
@@ -1001,6 +1022,13 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     };
 
     utterance.onerror = (e: any) => {
+      if (heartbeatTimerRef.current) {
+        clearInterval(heartbeatTimerRef.current);
+        heartbeatTimerRef.current = null;
+      }
+      activeUtteranceRef.current = null;
+      (window as any).__activeSpeechUtterance = null;
+
       if (!isSpeechActiveRef.current || e.error === 'canceled' || e.error === 'interrupted') {
         return;
       }
@@ -1142,6 +1170,12 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const pauseSpeech = () => {
     isSpeechActiveRef.current = false;
+    if (heartbeatTimerRef.current) {
+      clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
+    activeUtteranceRef.current = null;
+    (window as any).__activeSpeechUtterance = null;
 
     if (activeAudioRef.current) {
       pausedTimeRef.current = activeAudioRef.current.currentTime;
@@ -1225,6 +1259,13 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const stopSpeech = () => {
     isSpeechActiveRef.current = false;
+    if (heartbeatTimerRef.current) {
+      clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
+    activeUtteranceRef.current = null;
+    (window as any).__activeSpeechUtterance = null;
+
     speechQueueRef.current = [];
     speechIndexRef.current = 0;
     pausedTimeRef.current = 0;

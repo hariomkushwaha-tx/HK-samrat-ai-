@@ -465,7 +465,7 @@ app.post('/api/enhance-prompt', async (req, res) => {
     const ai = getGenAI();
     let enhanced = prompt;
 
-    const enhanceModels = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-pro-preview'];
+    const enhanceModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
     for (const m of enhanceModels) {
       if (isModelInCooldown(m)) continue;
       try {
@@ -483,8 +483,11 @@ User prompt: "${prompt}"`,
           break;
         }
       } catch (e: any) {
-        if (e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED')) {
+        const errMsg = e?.message || String(e);
+        if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED')) {
           markModelCooldown(m, 60000);
+        } else if (errMsg.includes('503') || errMsg.includes('UNAVAILABLE') || errMsg.includes('high demand') || errMsg.includes('overloaded')) {
+          markModelCooldown(m, 45000);
         }
       }
     }
@@ -838,7 +841,8 @@ You must rigidly observe user voice and text playback control commands:
     const isSearchAllowed = canUseSearch && Date.now() > searchGroundingCooldownUntil;
 
     // Healthy model hierarchy with priority on currently unthrottled models
-    const activeFlashModels = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-pro-preview'];
+    // Prioritize gemini-3.8-flash (standard stable text model), then gemini-3.1-flash-lite, then gemini-flash-latest
+    const activeFlashModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
     const sortedModels = [...activeFlashModels].sort((a, b) => {
       const aCd = isModelInCooldown(a) ? 1 : 0;
       const bCd = isModelInCooldown(b) ? 1 : 0;
@@ -947,6 +951,7 @@ You must rigidly observe user voice and text playback control commands:
         lastError = err;
         const errMsg = err?.message || String(err);
         const isQuota = errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota');
+        const isUnavailable = errMsg.includes('503') || errMsg.includes('UNAVAILABLE') || errMsg.includes('high demand') || errMsg.includes('overloaded');
 
         if (isQuota) {
           if (candidate.useSearch) {
@@ -958,6 +963,11 @@ You must rigidly observe user voice and text playback control commands:
             failedModelNames.add(candidate.modelName);
             console.warn(`[HK Samrat AI] Model ${candidate.modelName} quota limit reached. Cooldown initiated.`);
           }
+        } else if (isUnavailable) {
+          // Temporarily cooldown the overloaded model so immediate subsequent attempts bypass it
+          markModelCooldown(candidate.modelName, 45000);
+          failedModelNames.add(candidate.modelName);
+          console.warn(`[HK Samrat AI] Model ${candidate.modelName} temporarily experiencing high demand (503/UNAVAILABLE). Cooldown initiated.`);
         } else {
           console.warn(`[HK Samrat AI] Candidate ${candidate.modelName} attempt ${attempt + 1} fallback:`, errMsg.slice(0, 120));
           failedModelNames.add(candidate.modelName);
@@ -1045,7 +1055,7 @@ app.post('/api/imagine', async (req, res) => {
       );
 
     if (isLikelyNonEnglish || prompt.split(/\s+/).length < 4) {
-      const transModels = ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+      const transModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
       for (const tm of transModels) {
         if (isModelInCooldown(tm)) continue;
         try {
@@ -1073,8 +1083,11 @@ Output strict JSON: {"visualPrompt": "...", "searchSubject": "..."}`,
           }
           break;
         } catch (transErr: any) {
-          if (transErr?.message?.includes('429')) {
+          const tMsg = transErr?.message || String(transErr);
+          if (tMsg.includes('429') || tMsg.includes('RESOURCE_EXHAUSTED')) {
             markModelCooldown(tm, 60000);
+          } else if (tMsg.includes('503') || tMsg.includes('UNAVAILABLE') || tMsg.includes('high demand') || tMsg.includes('overloaded')) {
+            markModelCooldown(tm, 45000);
           }
         }
       }
@@ -1183,13 +1196,54 @@ function pcmToWav(pcmBuffer: Buffer, sampleRate = 24000, numChannels = 1, bitDep
 // In-memory TTS Cache to save quota and speed up repeated speech
 const ttsCache = new Map<string, { audioData: string; mimeType: string; voice: string }>();
 
+// Helper to split long speech text into natural sentence-boundary chunks (< 1400 chars)
+function splitIntoTTSChunks(text: string, maxChunkLen = 1400): string[] {
+  if (!text || text.length <= maxChunkLen) return [text];
+  const sentenceEndings = /([।!?\n]+|\.\s+)/;
+  const rawParts = text.split(sentenceEndings);
+  const chunks: string[] = [];
+  let current = '';
+
+  for (let i = 0; i < rawParts.length; i += 2) {
+    const part = rawParts[i] || '';
+    const delimiter = rawParts[i + 1] || '';
+    const fullSentence = part + delimiter;
+
+    if (!fullSentence) continue;
+
+    if ((current + fullSentence).length > maxChunkLen) {
+      if (current.trim()) chunks.push(current.trim());
+      if (fullSentence.length > maxChunkLen) {
+        // Break by commas, colons or spaces if sentence itself exceeds limit
+        const subWords = fullSentence.split(/([,;:\s]+)/);
+        let subCurrent = '';
+        for (const w of subWords) {
+          if ((subCurrent + w).length > maxChunkLen) {
+            if (subCurrent.trim()) chunks.push(subCurrent.trim());
+            subCurrent = w;
+          } else {
+            subCurrent += w;
+          }
+        }
+        current = subCurrent;
+      } else {
+        current = fullSentence;
+      }
+    } else {
+      current += fullSentence;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks.length > 0 ? chunks : [text];
+}
+
 // Helper to synthesize via Microsoft Edge Neural Voices (100% human studio quality)
 async function synthesizeWithEdgeTTS(text: string, edgeVoice: string): Promise<Buffer> {
   const tts = new EdgeTTS({
     voice: edgeVoice,
     lang: edgeVoice.slice(0, 5),
     outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-    timeout: 8000,
+    timeout: 30000,
   });
 
   const tempFile = path.join(os.tmpdir(), `hk_voice_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`);
@@ -1206,13 +1260,40 @@ async function synthesizeWithEdgeTTS(text: string, edgeVoice: string): Promise<B
   }
 }
 
+// Synthesizes full speech of any length without truncation by chunking & concatenating MP3 frames
+async function synthesizeFullAudioWithEdgeTTS(fullText: string, edgeVoice: string): Promise<Buffer> {
+  const chunks = splitIntoTTSChunks(fullText, 1400);
+  if (chunks.length === 1) {
+    return await synthesizeWithEdgeTTS(chunks[0], edgeVoice);
+  }
+
+  const audioBuffers: Buffer[] = [];
+  for (const chunk of chunks) {
+    if (!chunk.trim()) continue;
+    try {
+      const buf = await synthesizeWithEdgeTTS(chunk, edgeVoice);
+      if (buf && buf.length > 0) {
+        audioBuffers.push(buf);
+      }
+    } catch (chunkErr) {
+      console.warn('EdgeTTS chunk error, continuing with available chunks:', chunkErr);
+    }
+  }
+
+  if (audioBuffers.length === 0) {
+    throw new Error('All EdgeTTS chunks failed');
+  }
+
+  return Buffer.concat(audioBuffers);
+}
+
 // Helper to synthesize via Google Cloud TTS
 async function synthesizeWithGoogleTTS(text: string, lang: string): Promise<Buffer> {
   const chunks = await googleTTS.getAllAudioBase64(text, {
     lang: lang,
     slow: false,
     host: 'https://translate.google.com',
-    timeout: 8000,
+    timeout: 25000,
   });
   const buffers = chunks.map((chunk) => Buffer.from(chunk.base64, 'base64'));
   return Buffer.concat(buffers);
@@ -1264,7 +1345,8 @@ app.post('/api/tts', async (req, res) => {
         .replace(/\bWeb\b/gi, 'वेब');
     }
 
-    cleanSpeech = cleanSpeech.slice(0, 1500);
+    // Preserve full content up to 10,000 characters (instead of truncating at 1500)
+    cleanSpeech = cleanSpeech.slice(0, 10000);
 
     // Map to highest fidelity Microsoft Azure Neural voices
     let edgeVoice = isHindi ? 'hi-IN-SwaraNeural' : 'en-IN-NeerjaNeural';
@@ -1293,9 +1375,9 @@ app.post('/api/tts', async (req, res) => {
       });
     }
 
-    // Tier 1: Microsoft Edge Neural Voices (Human studio quality)
+    // Tier 1: Microsoft Edge Neural Voices (Human studio quality) - Full-length synthesis
     try {
-      const edgeAudioBuffer = await synthesizeWithEdgeTTS(cleanSpeech, edgeVoice);
+      const edgeAudioBuffer = await synthesizeFullAudioWithEdgeTTS(cleanSpeech, edgeVoice);
       if (edgeAudioBuffer && edgeAudioBuffer.length > 0) {
         const audioBase64 = edgeAudioBuffer.toString('base64');
         const mimeType = 'audio/mp3';

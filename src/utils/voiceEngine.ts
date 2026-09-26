@@ -248,19 +248,52 @@ export function chunkTextForSpeech(text: string): string[] {
     const trimmed = chunk.trim();
     if (!trimmed) continue;
 
-    // If chunk is too long (> 140 chars), break it at commas or semicolons
-    if (trimmed.length > 140) {
+    if (trimmed.length > 120) {
+      // Split first by secondary punctuation
       const subParts = trimmed.split(/([,;:\-–—]+)/);
       let current = '';
       for (const part of subParts) {
-        if ((current + part).length > 120) {
-          if (current.trim()) results.push(current.trim());
+        if ((current + part).length > 100) {
+          if (current.trim()) {
+            // Check if current is still too long (no punctuation)
+            if (current.length > 120) {
+              const words = current.split(/\s+/);
+              let wCurrent = '';
+              for (const w of words) {
+                if ((wCurrent + ' ' + w).length > 90) {
+                  if (wCurrent.trim()) results.push(wCurrent.trim());
+                  wCurrent = w;
+                } else {
+                  wCurrent = wCurrent ? wCurrent + ' ' + w : w;
+                }
+              }
+              if (wCurrent.trim()) results.push(wCurrent.trim());
+            } else {
+              results.push(current.trim());
+            }
+          }
           current = part;
         } else {
           current += part;
         }
       }
-      if (current.trim()) results.push(current.trim());
+      if (current.trim()) {
+        if (current.length > 120) {
+          const words = current.split(/\s+/);
+          let wCurrent = '';
+          for (const w of words) {
+            if ((wCurrent + ' ' + w).length > 90) {
+              if (wCurrent.trim()) results.push(wCurrent.trim());
+              wCurrent = w;
+            } else {
+              wCurrent = wCurrent ? wCurrent + ' ' + w : w;
+            }
+          }
+          if (wCurrent.trim()) results.push(wCurrent.trim());
+        } else {
+          results.push(current.trim());
+        }
+      }
     } else {
       results.push(trimmed);
     }
